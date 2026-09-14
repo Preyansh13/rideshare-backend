@@ -67,9 +67,10 @@ public class UserController {
     }
 
     @PostMapping
-    public User createUser(@Valid @RequestBody User user) {
+    public ResponseEntity<User> createUser(@Valid @RequestBody User user) {
         user.setId((long) users.size() + 1);
         users.add(user);
-        return user;
+
+        return ResponseEntity.status(201).body(user);
     }
 }
