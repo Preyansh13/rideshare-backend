@@ -21,7 +21,7 @@ import com.preyansh.ridesharing.model.User;
 @RequestMapping("/api/users")
 public class UserController {
 
-    private List<User> users = new ArrayList<>();
+    private final List<User> users = new ArrayList<>();
 
     public UserController() {
 
