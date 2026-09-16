@@ -15,31 +15,31 @@ import org.springframework.http.ResponseEntity;
 import jakarta.validation.Valid;
 
 import com.preyansh.ridesharing.model.User;
-import com.preyansh.ridesharing.repository.UserRepository;
+import com.preyansh.ridesharing.service.UserService;
 
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
 
-    private final UserRepository userRepository;
+    private final UserService userService;
 
-    public UserController(UserRepository userRepository) {
+    public UserController(UserService userService) {
 
-        this.userRepository = userRepository;
+        this.userService = userService;
 
     }
 
     @GetMapping
     public List<User> getUsers() {
 
-        return userRepository.findAll();
+        return userService.getUsers();
 
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<User> getUserById(@PathVariable Long id) {
 
-        return userRepository.findById(id)
+        return userService.getUserById(id)
                         .map(ResponseEntity::ok)
                         .orElseGet(() -> ResponseEntity.notFound().build());
 
@@ -47,31 +47,23 @@ public class UserController {
 
     @PostMapping
     public ResponseEntity<User> createUser(@Valid @RequestBody User user) {
-        User savedUser = userRepository.save(user);
+        User savedUser = userService.createUser(user);
         return ResponseEntity.status(201).body(savedUser);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<User> updateUser(@PathVariable Long id, @Valid @RequestBody User updatedUser) {
 
-        return userRepository.findById(id)
-                        .map(user -> {
-                            user.setName(updatedUser.getName());
-                            user.setEmail(updatedUser.getEmail());
-                            user.setPhone(updatedUser.getPhone());
-
-                            User savedUser = userRepository.save(user);
-                            return ResponseEntity.ok(savedUser);
-                        })
-                        .orElseGet(() -> ResponseEntity.notFound().build());
+        return userService.updateUser(id, updatedUser)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
 
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
 
-        if (userRepository.existsById(id)) {
-            userRepository.deleteById(id);
+        if (userService.deleteUser(id)) {
             return ResponseEntity.noContent().build();
         }
 
