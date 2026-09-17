@@ -16,6 +16,8 @@ import jakarta.validation.Valid;
 
 import com.preyansh.ridesharing.model.User;
 import com.preyansh.ridesharing.service.UserService;
+import com.preyansh.ridesharing.dto.UserRequest;
+import com.preyansh.ridesharing.dto.UserResponse;
 
 @RestController
 @RequestMapping("/api/users")
@@ -37,7 +39,7 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable Long id) {
+    public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) {
 
         return userService.getUserById(id)
                         .map(ResponseEntity::ok)
@@ -46,15 +48,15 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<User> createUser(@Valid @RequestBody User user) {
-        User savedUser = userService.createUser(user);
+    public ResponseEntity<User> createUser(@Valid @RequestBody UserRequest userRequest) {
+        User savedUser = userService.createUser(userRequest);
         return ResponseEntity.status(201).body(savedUser);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable Long id, @Valid @RequestBody User updatedUser) {
+    public ResponseEntity<User> updateUser(@PathVariable Long id, @Valid @RequestBody UserRequest updatedUserRequest) {
 
-        return userService.updateUser(id, updatedUser)
+        return userService.updateUser(id, updatedUserRequest)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
 

@@ -6,10 +6,6 @@ import jakarta.persistence.Table;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.Pattern;
-
 @Entity
 @Table(name = "users")
 public class User {
@@ -18,13 +14,10 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank
     private String name;
 
-    @Email
     private String email;
 
-    @Pattern(regexp = "^[0-9]{10}$")
     private String phone;
 
     public User() {
