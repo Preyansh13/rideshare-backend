@@ -1,26 +1,12 @@
-package com.preyansh.ridesharing.model;
+package com.preyansh.ridesharing.dto;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-
-@Entity
-@Table(name = "users")
-public class User {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+public class UserResponse {
     private Long id;
-
     private String name;
-
     private String email;
-
     private String phone;
 
-    public User() {
+    public UserResponse() {
 
     }
 

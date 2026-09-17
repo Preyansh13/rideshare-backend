@@ -1,5 +1,7 @@
 package com.preyansh.ridesharing.service;
 
+import com.preyansh.ridesharing.dto.UserRequest;
+import com.preyansh.ridesharing.dto.UserResponse;
 import com.preyansh.ridesharing.model.User;
 import com.preyansh.ridesharing.repository.UserRepository;
 
@@ -21,20 +23,33 @@ public class UserService {
         return userRepository.findAll();
     }
 
-    public Optional<User> getUserById(Long id) {
-        return userRepository.findById(id);
+    public Optional<UserResponse> getUserById(Long id) {
+        return userRepository.findById(id)
+                .map(user -> {
+                    UserResponse userResponse = new UserResponse();
+                    userResponse.setId(user.getId());
+                    userResponse.setName(user.getName());
+                    userResponse.setEmail(user.getEmail());
+                    userResponse.setPhone(user.getPhone());
+
+                    return userResponse;
+                });
     }
 
-    public User createUser(User user) {
+    public User createUser(UserRequest userRequest) {
+        User user = new User();
+        user.setName(userRequest.getName());
+        user.setEmail(userRequest.getEmail());
+        user.setPhone(userRequest.getPhone());
         return userRepository.save(user);
     }
 
-    public Optional<User> updateUser(Long id, User updatedUser) {
+    public Optional<User> updateUser(Long id, UserRequest updatedUserRequest) {
         return userRepository.findById(id)
                 .map(user -> {
-                    user.setName(updatedUser.getName());
-                    user.setEmail(updatedUser.getEmail());
-                    user.setPhone(updatedUser.getPhone());
+                    user.setName(updatedUserRequest.getName());
+                    user.setEmail(updatedUserRequest.getEmail());
+                    user.setPhone(updatedUserRequest.getPhone());
 
                     return userRepository.save(user);
                 });
