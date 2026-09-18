@@ -19,8 +19,18 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
-    public List<User> getUsers() {
-        return userRepository.findAll();
+    public List<UserResponse> getUsers() {
+        return userRepository.findAll()
+                .stream()
+                .map(user -> {
+                    UserResponse userResponse = new UserResponse();
+                    userResponse.setId(user.getId());
+                    userResponse.setName(user.getName());
+                    userResponse.setEmail(user.getEmail());
+                    userResponse.setPhone(user.getPhone());
+
+                    return userResponse;
+                }).toList();
     }
 
     public Optional<UserResponse> getUserById(Long id) {
@@ -36,22 +46,39 @@ public class UserService {
                 });
     }
 
-    public User createUser(UserRequest userRequest) {
+    public UserResponse createUser(UserRequest userRequest) {
         User user = new User();
         user.setName(userRequest.getName());
         user.setEmail(userRequest.getEmail());
         user.setPhone(userRequest.getPhone());
-        return userRepository.save(user);
+
+        User savedUser = userRepository.save(user);
+
+        UserResponse userResponse = new UserResponse();
+        userResponse.setId(savedUser.getId());
+        userResponse.setName(savedUser.getName());
+        userResponse.setEmail(savedUser.getEmail());
+        userResponse.setPhone(savedUser.getPhone());
+
+        return userResponse;
     }
 
-    public Optional<User> updateUser(Long id, UserRequest updatedUserRequest) {
+    public Optional<UserResponse> updateUser(Long id, UserRequest updatedUserRequest) {
         return userRepository.findById(id)
                 .map(user -> {
                     user.setName(updatedUserRequest.getName());
                     user.setEmail(updatedUserRequest.getEmail());
                     user.setPhone(updatedUserRequest.getPhone());
 
-                    return userRepository.save(user);
+                    User updatedUser = userRepository.save(user);
+
+                    UserResponse userResponse = new UserResponse();
+                    userResponse.setId(updatedUser.getId());
+                    userResponse.setName(updatedUser.getName());
+                    userResponse.setEmail(updatedUser.getEmail());
+                    userResponse.setPhone(updatedUser.getPhone());
+
+                    return userResponse;
                 });
     }
 
