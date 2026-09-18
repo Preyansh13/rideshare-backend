@@ -14,7 +14,6 @@ import org.springframework.http.ResponseEntity;
 
 import jakarta.validation.Valid;
 
-import com.preyansh.ridesharing.model.User;
 import com.preyansh.ridesharing.service.UserService;
 import com.preyansh.ridesharing.dto.UserRequest;
 import com.preyansh.ridesharing.dto.UserResponse;
@@ -32,7 +31,7 @@ public class UserController {
     }
 
     @GetMapping
-    public List<User> getUsers() {
+    public List<UserResponse> getUsers() {
 
         return userService.getUsers();
 
@@ -48,13 +47,13 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<User> createUser(@Valid @RequestBody UserRequest userRequest) {
-        User savedUser = userService.createUser(userRequest);
+    public ResponseEntity<UserResponse> createUser(@Valid @RequestBody UserRequest userRequest) {
+        UserResponse savedUser = userService.createUser(userRequest);
         return ResponseEntity.status(201).body(savedUser);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable Long id, @Valid @RequestBody UserRequest updatedUserRequest) {
+    public ResponseEntity<UserResponse> updateUser(@PathVariable Long id, @Valid @RequestBody UserRequest updatedUserRequest) {
 
         return userService.updateUser(id, updatedUserRequest)
                 .map(ResponseEntity::ok)
