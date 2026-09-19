@@ -2,6 +2,7 @@ package com.preyansh.ridesharing.service;
 
 import com.preyansh.ridesharing.dto.UserRequest;
 import com.preyansh.ridesharing.dto.UserResponse;
+import com.preyansh.ridesharing.exception.UserAlreadyExistsException;
 import com.preyansh.ridesharing.model.User;
 import com.preyansh.ridesharing.repository.UserRepository;
 
@@ -47,6 +48,11 @@ public class UserService {
     }
 
     public UserResponse createUser(UserRequest userRequest) {
+        Optional<User> existingUser = userRepository.findByEmail(userRequest.getEmail());
+        if (existingUser.isPresent()) {
+            throw new UserAlreadyExistsException("User with this email already exists");
+        }
+
         User user = new User();
         user.setName(userRequest.getName());
         user.setEmail(userRequest.getEmail());
