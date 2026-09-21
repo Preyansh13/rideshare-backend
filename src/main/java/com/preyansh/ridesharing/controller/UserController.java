@@ -25,25 +25,18 @@ public class UserController {
     private final UserService userService;
 
     public UserController(UserService userService) {
-
         this.userService = userService;
-
     }
 
     @GetMapping
     public List<UserResponse> getUsers() {
-
         return userService.getUsers();
-
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) {
-
-        return userService.getUserById(id)
-                        .map(ResponseEntity::ok)
-                        .orElseGet(() -> ResponseEntity.notFound().build());
-
+        UserResponse userResponse = userService.getUserById(id);
+        return ResponseEntity.ok(userResponse);
     }
 
     @PostMapping
@@ -54,22 +47,13 @@ public class UserController {
 
     @PutMapping("/{id}")
     public ResponseEntity<UserResponse> updateUser(@PathVariable Long id, @Valid @RequestBody UserRequest updatedUserRequest) {
-
-        return userService.updateUser(id, updatedUserRequest)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
-
+        UserResponse updatedUser = userService.updateUser(id, updatedUserRequest);
+        return ResponseEntity.ok(updatedUser);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
-
-        if (userService.deleteUser(id)) {
-            return ResponseEntity.noContent().build();
-        }
-
-        return ResponseEntity.notFound().build();
-
+        userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
     }
-
 }
