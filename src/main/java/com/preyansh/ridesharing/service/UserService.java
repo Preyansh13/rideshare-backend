@@ -1,5 +1,6 @@
 package com.preyansh.ridesharing.service;
 
+import com.preyansh.ridesharing.dto.UserPatchRequest;
 import com.preyansh.ridesharing.dto.UserRequest;
 import com.preyansh.ridesharing.dto.UserResponse;
 import com.preyansh.ridesharing.exception.UserAlreadyExistsException;
@@ -90,6 +91,7 @@ public class UserService {
         User updatedUser = userRepository.save(user);
 
         UserResponse userResponse = new UserResponse();
+
         userResponse.setId(updatedUser.getId());
         userResponse.setName(updatedUser.getName());
         userResponse.setEmail(updatedUser.getEmail());
@@ -108,4 +110,41 @@ public class UserService {
         userRepository.deleteById(id);
     }
 
+    public UserResponse patchUser(Long id, UserPatchRequest request) {
+        Optional<User> existingUser = userRepository.findById(id);
+
+        if (existingUser.isEmpty()) {
+            throw new UserNotFoundException("User with id " + id + " not found");
+        }
+
+        User user = existingUser.get();
+
+        if (request.getName() != null) {
+            user.setName(request.getName());
+        }
+
+        if (request.getEmail() != null) {
+            Optional<User> existingUserWithEmail = userRepository.findByEmailAndIdNot(request.getEmail(), id);
+
+            if (existingUserWithEmail.isPresent()) {
+                throw new UserAlreadyExistsException("User with this email already exists");
+            }
+            user.setEmail(request.getEmail());
+        }
+
+        if (request.getPhone() != null) {
+            user.setPhone(request.getPhone());
+        }
+
+        User updatedUser = userRepository.save(user);
+
+        UserResponse userResponse = new UserResponse();
+
+        userResponse.setId(updatedUser.getId());
+        userResponse.setName(updatedUser.getName());
+        userResponse.setEmail(updatedUser.getEmail());
+        userResponse.setPhone(updatedUser.getPhone());
+
+        return userResponse;
+    }
 }
