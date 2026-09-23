@@ -56,4 +56,9 @@ public class UserController {
         UserResponse updatedUser = userService.patchUser(id, request);
         return ResponseEntity.ok(updatedUser);
     }
+
+    @GetMapping("/search")
+    public List<UserResponse> searchUsersByName(@RequestParam String name) {
+        return userService.searchUsersByName(name);
+    }
 }
