@@ -27,6 +27,7 @@ public class UserService {
                 .stream()
                 .map(user -> {
                     UserResponse userResponse = new UserResponse();
+
                     userResponse.setId(user.getId());
                     userResponse.setName(user.getName());
                     userResponse.setEmail(user.getEmail());
@@ -151,5 +152,20 @@ public class UserService {
         userResponse.setPhone(updatedUser.getPhone());
 
         return userResponse;
+    }
+
+    public List<UserResponse> searchUsersByName(String name) {
+        return userRepository.findByName(name)
+                .stream()
+                .map(user -> {
+                    UserResponse userResponse = new UserResponse();
+
+                    userResponse.setId(user.getId());
+                    userResponse.setName(user.getName());
+                    userResponse.setEmail(user.getEmail());
+                    userResponse.setPhone(user.getPhone());
+
+                    return userResponse;
+                }).toList();
     }
 }
