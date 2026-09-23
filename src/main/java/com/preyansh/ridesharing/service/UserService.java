@@ -83,6 +83,11 @@ public class UserService {
         }
 
         User user = existingUser.get();
+        Optional<User> existingUserWithEmail = userRepository.findByEmailAndIdNot(updatedUserRequest.getEmail(), id);
+
+        if (existingUserWithEmail.isPresent()) {
+            throw new UserAlreadyExistsException("User with this email already exists");
+        }
 
         user.setName(updatedUserRequest.getName());
         user.setEmail(updatedUserRequest.getEmail());
