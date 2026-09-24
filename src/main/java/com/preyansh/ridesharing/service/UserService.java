@@ -155,7 +155,7 @@ public class UserService {
     }
 
     public List<UserResponse> searchUsersByName(String name) {
-        return userRepository.findByName(name)
+        return userRepository.findByNameContainingIgnoreCase(name)
                 .stream()
                 .map(user -> {
                     UserResponse userResponse = new UserResponse();
