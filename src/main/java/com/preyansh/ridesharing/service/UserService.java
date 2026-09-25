@@ -168,4 +168,19 @@ public class UserService {
                     return userResponse;
                 }).toList();
     }
+
+    public List<UserResponse> searchUsersByEmail(String email) {
+        return userRepository.findByEmailContainingIgnoreCase(email)
+                .stream()
+                .map(user -> {
+                    UserResponse userResponse = new UserResponse();
+
+                    userResponse.setId(user.getId());
+                    userResponse.setName(user.getName());
+                    userResponse.setEmail(user.getEmail());
+                    userResponse.setPhone(user.getPhone());
+
+                    return userResponse;
+                }).toList();
+    }
 }
