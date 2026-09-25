@@ -57,8 +57,13 @@ public class UserController {
         return ResponseEntity.ok(updatedUser);
     }
 
-    @GetMapping("/search")
+    @GetMapping("/search/name")
     public List<UserResponse> searchUsersByName(@RequestParam String name) {
         return userService.searchUsersByName(name);
+    }
+
+    @GetMapping("/search/email")
+    public List<UserResponse> searchUsersByEmail(@RequestParam String email) {
+        return userService.searchUsersByEmail(email);
     }
 }
