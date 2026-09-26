@@ -58,8 +58,11 @@ public class UserController {
     }
 
     @GetMapping("/search/name")
-    public List<UserResponse> searchUsersByName(@RequestParam String name) {
-        return userService.searchUsersByName(name);
+    public ResponseEntity<List<UserResponse>> searchUsersByName(@RequestParam(required = false) String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Name search parameter cannot be empty");
+        }
+        return ResponseEntity.ok(userService.searchUsersByName(name));
     }
 
     @GetMapping("/search/email")
