@@ -7,17 +7,29 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 
+import com.preyansh.ridesharing.dto.ValidationErrorResponse;
 import com.preyansh.ridesharing.dto.ErrorResponse;
+
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException ex, HttpServletRequest request) {
-        var error = ex.getBindingResult()
+    public ResponseEntity<ValidationErrorResponse> handleValidationException(MethodArgumentNotValidException ex, HttpServletRequest request) {
+//        var error = ex.getBindingResult()
+//                .getFieldErrors()
+//                .get(0);
+        Map<String, String> errors = ex.getBindingResult()
                 .getFieldErrors()
-                .get(0);
-        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), error.getField() + ": " + error.getDefaultMessage(), request.getRequestURI());
+                .stream()
+                .collect(Collectors.toMap(
+                        error -> error.getField(),
+                        error -> error.getDefaultMessage(),
+                        (message1, message2) -> message1
+                ));
+        ValidationErrorResponse errorResponse = new ValidationErrorResponse(HttpStatus.BAD_REQUEST.value(), errors, request.getRequestURI());
 
         return ResponseEntity
                 .badRequest()
