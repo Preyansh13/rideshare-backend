@@ -8,6 +8,8 @@ import com.preyansh.ridesharing.exception.UserNotFoundException;
 import com.preyansh.ridesharing.model.User;
 import com.preyansh.ridesharing.repository.UserRepository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -22,9 +24,8 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
-    public List<UserResponse> getUsers() {
-        return userRepository.findAll()
-                .stream()
+    public Page<UserResponse> getUsers(Pageable pageable) {
+        return userRepository.findAll(pageable)
                 .map(user -> {
                     UserResponse userResponse = new UserResponse();
 
@@ -34,7 +35,7 @@ public class UserService {
                     userResponse.setPhone(user.getPhone());
 
                     return userResponse;
-                }).toList();
+                });
     }
 
     public UserResponse getUserById(Long id) {

@@ -2,6 +2,8 @@ package com.preyansh.ridesharing.controller;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 
@@ -23,8 +25,8 @@ public class UserController {
     }
 
     @GetMapping
-    public List<UserResponse> getUsers() {
-        return userService.getUsers();
+    public Page<UserResponse> getUsers(Pageable pageable) {
+        return userService.getUsers(pageable);
     }
 
     @GetMapping("/{id}")
