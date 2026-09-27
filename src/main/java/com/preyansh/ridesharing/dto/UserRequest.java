@@ -6,13 +6,15 @@ import jakarta.validation.constraints.Pattern;
 
 public class UserRequest {
 
-    @NotBlank
+    @NotBlank(message = "Name is required")
     private String name;
 
-    @Email
+    @NotBlank(message = "Email is required")
+    @Email(message = "Invalid email format")
     private String email;
 
-    @Pattern(regexp = "^[0-9]{10}$")
+    @NotBlank(message = "Phone is required")
+    @Pattern(regexp = "^[0-9]{10}$", message = "Phone must contain exactly 10 digits")
     private String phone;
 
     public UserRequest() {
