@@ -1,6 +1,6 @@
 # RideShare Backend
 
-A scalable ride-sharing backend built with Java, Spring Boot, Spring Data JPA, PostgreSQL,& REST APIs.
+A scalable ride-sharing backend built with Java, Spring Boot, Spring Data JPA, PostgreSQL,and REST APIs.
 
 ## Tech Stack
 
