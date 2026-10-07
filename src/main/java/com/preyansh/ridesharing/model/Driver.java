@@ -14,6 +14,10 @@ public class Driver {
     @JoinColumn(name = "user_id", unique = true)
     private User user;
 
+    @OneToOne
+    @JoinColumn(name = "vehicle_id", unique = true)
+    private Vehicle vehicle;
+
     private String licenseNumber;
 
     @Enumerated(EnumType.STRING)
@@ -37,6 +41,14 @@ public class Driver {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public Vehicle getVehicle() {
+        return vehicle;
+    }
+
+    public void setVehicle(Vehicle vehicle) {
+        this.vehicle = vehicle;
     }
 
     public String getLicenseNumber() {
