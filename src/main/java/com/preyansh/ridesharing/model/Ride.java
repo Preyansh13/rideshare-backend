@@ -42,7 +42,7 @@ public class Ride {
     // Stores the current lifecycle state of this ride.
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private RideStatus status;
+    private RideStatus status = RideStatus.REQUESTED;
 
     // No-argument constructor required by JPA.
     public Ride() {
@@ -111,5 +111,15 @@ public class Ride {
     // Sets the ride request timestamp.
     public void setRequestedAt(LocalDateTime requestedAt) {
         this.requestedAt = requestedAt;
+    }
+
+    // Returns the current status of the ride.
+    public RideStatus getStatus() {
+        return status;
+    }
+
+    // Updates the status of the ride.
+    public void setStatus(RideStatus status) {
+        this.status = status;
     }
 }
