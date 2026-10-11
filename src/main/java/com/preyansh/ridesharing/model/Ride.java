@@ -44,6 +44,15 @@ public class Ride {
 
     }
 
+    // Runs before a new Ride entity is inserted into the database.
+    @PrePersist
+    protected void onCreate() {
+        // Set the request time automatically if it was not provided.
+        if (requestedAt == null) {
+            requestedAt = LocalDateTime.now();
+        }
+    }
+
     // Returns the database-generated ride ID.
     public Long getId() {
         return id;
