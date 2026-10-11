@@ -15,6 +15,18 @@ public class Ride {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // The user who requested this ride.
+    // A user can request multiple rides.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "rider_id", nullable = false)
+    private User rider;
+
+    // The driver assigned to this ride.
+    // This can remain null until a driver accepts the ride.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "driver_id")
+    private Driver driver;
+
     // Pickup location is mandatory for every ride.
     @Column(nullable = false)
     private String pickupLocation;
@@ -35,6 +47,26 @@ public class Ride {
     // Returns the database-generated ride ID.
     public Long getId() {
         return id;
+    }
+
+    // Returns the user who requested this ride.
+    public User getRider() {
+        return rider;
+    }
+
+    // Assigns the rider to this ride.
+    public void setRider(User rider) {
+        this.rider = rider;
+    }
+
+    // Returns the driver assigned to this ride, if any.
+    public Driver getDriver() {
+        return driver;
+    }
+
+    // Assigns a driver to this ride.
+    public void setDriver(Driver driver) {
+        this.driver = driver;
     }
 
     // Returns the pickup location.
