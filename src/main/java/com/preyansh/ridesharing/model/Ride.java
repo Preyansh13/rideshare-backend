@@ -39,6 +39,11 @@ public class Ride {
     @Column(nullable = false)
     private LocalDateTime requestedAt;
 
+    // Stores the current lifecycle state of this ride.
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private RideStatus status;
+
     // No-argument constructor required by JPA.
     public Ride() {
 
