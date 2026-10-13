@@ -6,10 +6,7 @@ import com.preyansh.ridesharing.service.RideService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 // Handles HTTP requests related to rides.
 @RestController
@@ -24,10 +21,20 @@ public class RideController {
         this.rideService = rideService;
     }
 
+    // Retrieves a ride by its ID and returns HTTP 200 OK.
+    @GetMapping("/{id}")
+    public ResponseEntity<RideResponse> getRideById(@PathVariable Long id) {
+
+        // Delegate ride retrieval to the service layer.
+        RideResponse rideResponse = rideService.getRideById(id);
+
+        // Return the retrieved ride details with a 200 status code.
+        return ResponseEntity.ok(rideResponse);
+    }
+
     // Creates a ride from the request and returns HTTP 201 Created.
     @PostMapping
-    public ResponseEntity<RideResponse> createRide(
-            @Valid @RequestBody RideRequest request) {
+    public ResponseEntity<RideResponse> createRide(@Valid @RequestBody RideRequest request) {
 
         // Delegate ride creation to the service layer.
         RideResponse createdRide = rideService.createRide(request);

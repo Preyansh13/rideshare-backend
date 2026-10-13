@@ -2,14 +2,18 @@ package com.preyansh.ridesharing.service;
 
 import com.preyansh.ridesharing.dto.RideRequest;
 import com.preyansh.ridesharing.dto.RideResponse;
+import com.preyansh.ridesharing.exception.RideNotFoundException;
 import com.preyansh.ridesharing.exception.UserNotFoundException;
 import com.preyansh.ridesharing.model.Ride;
 import com.preyansh.ridesharing.model.RideStatus;
 import com.preyansh.ridesharing.model.User;
 import com.preyansh.ridesharing.repository.RideRepository;
 import com.preyansh.ridesharing.repository.UserRepository;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 // Contains the business logic for creating rides.
 @Service
@@ -22,6 +26,36 @@ public class RideService {
     public RideService(RideRepository rideRepository, UserRepository userRepository) {
         this.rideRepository = rideRepository;
         this.userRepository = userRepository;
+    }
+
+    // Retrieves a ride by its ID and returns its response DTO.
+    public RideResponse getRideById(Long id) {
+
+        // Search for the ride using its ID.
+        Optional<Ride> existingRide = rideRepository.findById(id);
+
+        // Throw an exception if the requested ride does not exist.
+        if (existingRide.isEmpty()) {
+            throw new RideNotFoundException("Ride with id " + id + " not found");
+        }
+
+        // Retrieve the Ride entity after confirming it exists.
+        Ride ride = existingRide.get();
+
+        // Convert the Ride entity into a response DTO.
+        // Return null for driverId when no driver has been assigned.
+        RideResponse rideResponse = new RideResponse(
+                ride.getId(),
+                ride.getRider().getId(),
+                ride.getDriver() == null ? null : ride.getDriver().getId(),
+                ride.getPickupLocation(),
+                ride.getDropoffLocation(),
+                ride.getStatus(),
+                ride.getRequestedAt()
+        );
+
+        // Return the ride details to the caller.
+        return rideResponse;
     }
 
     @Transactional
