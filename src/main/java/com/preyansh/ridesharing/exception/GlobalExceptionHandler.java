@@ -100,4 +100,15 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.NOT_FOUND)
                 .body(errorResponse);
     }
+
+    // Handles requests for rides that cannot be found.
+    @ExceptionHandler(RideNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleRideNotFoundException(RideNotFoundException ex, HttpServletRequest request) {
+
+        // Returns HTTP 404 Not Found with the exception's message.
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), request.getRequestURI());
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(errorResponse);
+    }
 }
