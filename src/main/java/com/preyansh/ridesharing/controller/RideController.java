@@ -8,6 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 // Handles HTTP requests related to rides.
 @RestController
 @RequestMapping("/api/rides")
@@ -19,6 +21,14 @@ public class RideController {
     // Constructor injection supplies the ride service.
     public RideController(RideService rideService) {
         this.rideService = rideService;
+    }
+
+    // Retrieves all rides and returns HTTP 200 OK.
+    @GetMapping
+    public List<RideResponse> getRides() {
+
+        // Delegate ride retrieval to the service layer.
+        return rideService.getRides();
     }
 
     // Retrieves a ride by its ID and returns HTTP 200 OK.
