@@ -30,7 +30,7 @@ public class RideService {
     }
 
     // Retrieves all rides and returns them as response DTOs.
-    public List<RideResponse> getAllRides() {
+    public List<RideResponse> getRides() {
 
         // Fetch all rides from the database, then convert each entity into a DTO.
         return rideRepository.findAll()
