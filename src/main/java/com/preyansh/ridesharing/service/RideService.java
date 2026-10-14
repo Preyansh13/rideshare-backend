@@ -13,6 +13,7 @@ import com.preyansh.ridesharing.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 // Contains the business logic for creating rides.
@@ -26,6 +27,28 @@ public class RideService {
     public RideService(RideRepository rideRepository, UserRepository userRepository) {
         this.rideRepository = rideRepository;
         this.userRepository = userRepository;
+    }
+
+    // Retrieves all rides and returns them as response DTOs.
+    public List<RideResponse> getAllRides() {
+
+        // Fetch all rides from the database, then convert each entity into a DTO.
+        return rideRepository.findAll()
+                .stream()
+                .map(ride -> new RideResponse(
+                        ride.getId(),
+                        ride.getRider().getId(),
+
+                        // Return null when the ride has not been assigned a driver.
+                        ride.getDriver() == null ? null : ride.getDriver().getId(),
+
+                        ride.getPickupLocation(),
+                        ride.getDropoffLocation(),
+                        ride.getStatus(),
+                        ride.getRequestedAt()
+                ))
+                // Collect all converted DTOs into a list.
+                .toList();
     }
 
     // Retrieves a ride by its ID and returns its response DTO.
