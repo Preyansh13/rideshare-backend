@@ -42,6 +42,14 @@ public class RideController {
         return ResponseEntity.ok(rideResponse);
     }
 
+    // Retrieves all rides belonging to a specific rider.
+    @GetMapping("/rider/{riderId}")
+    public List<RideResponse> getRidesByRiderId(@PathVariable Long riderId) {
+
+        // Delegate ride retrieval to the service layer.
+        return rideService.getRidesByRiderId(riderId);
+    }
+
     // Creates a ride from the request and returns HTTP 201 Created.
     @PostMapping
     public ResponseEntity<RideResponse> createRide(@Valid @RequestBody RideRequest request) {
