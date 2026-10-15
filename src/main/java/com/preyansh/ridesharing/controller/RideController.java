@@ -2,8 +2,11 @@ package com.preyansh.ridesharing.controller;
 
 import com.preyansh.ridesharing.dto.RideRequest;
 import com.preyansh.ridesharing.dto.RideResponse;
+import com.preyansh.ridesharing.model.RideStatus;
 import com.preyansh.ridesharing.service.RideService;
+
 import jakarta.validation.Valid;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -48,6 +51,14 @@ public class RideController {
 
         // Delegate ride retrieval to the service layer.
         return rideService.getRidesByRiderId(riderId);
+    }
+
+    // Retrieves rides matching the specified status.
+    @GetMapping("/status/{status}")
+    public List<RideResponse> getRidesByStatus(@PathVariable RideStatus status) {
+
+        // Delegate status-based retrieval to the service layer.
+        return rideService.getRidesByStatus(status);
     }
 
     // Creates a ride from the request and returns HTTP 201 Created.
