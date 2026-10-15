@@ -103,6 +103,26 @@ public class RideService {
                 .toList();
     }
 
+    // Retrieves rides matching the specified status.
+    public List<RideResponse> getRidesByStatus(RideStatus status) {
+        // Fetch rides with the requested status from the database.
+        return rideRepository.findByStatus(status)
+                .stream()
+                // Convert each Ride entity into a RideResponse DTO.
+                .map(ride -> new RideResponse(
+                        ride.getId(),
+                        ride.getRider().getId(),
+                        // Return null if no driver has been assigned to the ride.
+                        ride.getDriver() == null ? null : ride.getDriver().getId(),
+                        ride.getPickupLocation(),
+                        ride.getDropoffLocation(),
+                        ride.getStatus(),
+                        ride.getRequestedAt()
+                ))
+                // Collect the converted DTOs into a list and return it.
+                .toList();
+    }
+
     @Transactional
     public RideResponse createRide(RideRequest request) {
         User rider = userRepository.findById(request.riderId())
