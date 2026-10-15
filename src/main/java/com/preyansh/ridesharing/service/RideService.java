@@ -81,11 +81,32 @@ public class RideService {
         return rideResponse;
     }
 
+    // Retrieves all rides belonging to a specific rider.
+    public List<RideResponse> getRidesByRiderId(Long riderId) {
+        // Fetch rides associated with the given rider ID from the database.
+        return rideRepository.findByRiderId(riderId)
+                .stream()
+                // Convert each Ride entity into a RideResponse DTO.
+                .map(ride -> new RideResponse(
+                        ride.getId(),
+                        ride.getRider().getId(),
+
+                        // Return null if no driver has been assigned to the ride.
+                        ride.getDriver() == null ? null : ride.getDriver().getId(),
+
+                        ride.getPickupLocation(),
+                        ride.getDropoffLocation(),
+                        ride.getStatus(),
+                        ride.getRequestedAt()
+                ))
+                // Collect the converted DTOs into a list and return it.
+                .toList();
+    }
+
     @Transactional
     public RideResponse createRide(RideRequest request) {
         User rider = userRepository.findById(request.riderId())
                 .orElseThrow(() -> new UserNotFoundException("User with id " + request.riderId() + " not found"));
-
         // Build a new ride using the validated request details.
         Ride ride = new Ride();
         ride.setRider(rider);
