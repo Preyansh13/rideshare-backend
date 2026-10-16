@@ -29,7 +29,6 @@ public class RideController {
     // Retrieves all rides and returns HTTP 200 OK.
     @GetMapping
     public List<RideResponse> getRides() {
-
         // Delegate ride retrieval to the service layer.
         return rideService.getRides();
     }
@@ -37,10 +36,8 @@ public class RideController {
     // Retrieves a ride by its ID and returns HTTP 200 OK.
     @GetMapping("/{id}")
     public ResponseEntity<RideResponse> getRideById(@PathVariable Long id) {
-
         // Delegate ride retrieval to the service layer.
         RideResponse rideResponse = rideService.getRideById(id);
-
         // Return the retrieved ride details with a 200 status code.
         return ResponseEntity.ok(rideResponse);
     }
@@ -48,15 +45,20 @@ public class RideController {
     // Retrieves all rides belonging to a specific rider.
     @GetMapping("/rider/{riderId}")
     public List<RideResponse> getRidesByRiderId(@PathVariable Long riderId) {
-
         // Delegate ride retrieval to the service layer.
         return rideService.getRidesByRiderId(riderId);
+    }
+
+    // Retrieves all rides assigned to a specific driver.
+    @GetMapping("/driver/{driverId}")
+    public List<RideResponse> getRidesByDriverId(@PathVariable Long driverId) {
+        // Delegate driver-based ride retrieval to the service layer.
+        return rideService.getRidesByDriverId(driverId);
     }
 
     // Retrieves rides matching the specified status.
     @GetMapping("/status/{status}")
     public List<RideResponse> getRidesByStatus(@PathVariable RideStatus status) {
-
         // Delegate status-based retrieval to the service layer.
         return rideService.getRidesByStatus(status);
     }
@@ -64,10 +66,8 @@ public class RideController {
     // Creates a ride from the request and returns HTTP 201 Created.
     @PostMapping
     public ResponseEntity<RideResponse> createRide(@Valid @RequestBody RideRequest request) {
-
         // Delegate ride creation to the service layer.
         RideResponse createdRide = rideService.createRide(request);
-
         // Return the created ride details with a 201 status code.
         return ResponseEntity.status(HttpStatus.CREATED).body(createdRide);
     }
