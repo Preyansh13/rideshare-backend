@@ -71,4 +71,13 @@ public class RideController {
         // Return the created ride details with a 201 status code.
         return ResponseEntity.status(HttpStatus.CREATED).body(createdRide);
     }
+
+    // Cancels a ride by its ID and returns HTTP 200 OK.
+    @PatchMapping("/{id}/cancel")
+    public ResponseEntity<RideResponse> cancelRide(@PathVariable Long id) {
+        // Delegate ride cancellation and status validation to the service layer.
+        RideResponse cancelledRide = rideService.cancelRide(id);
+        // Return the updated ride details with a 200 status code.
+        return ResponseEntity.ok(cancelledRide);
+    }
 }
