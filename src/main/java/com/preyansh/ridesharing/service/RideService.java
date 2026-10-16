@@ -31,17 +31,14 @@ public class RideService {
 
     // Retrieves all rides and returns them as response DTOs.
     public List<RideResponse> getRides() {
-
         // Fetch all rides from the database, then convert each entity into a DTO.
         return rideRepository.findAll()
                 .stream()
                 .map(ride -> new RideResponse(
                         ride.getId(),
                         ride.getRider().getId(),
-
                         // Return null when the ride has not been assigned a driver.
                         ride.getDriver() == null ? null : ride.getDriver().getId(),
-
                         ride.getPickupLocation(),
                         ride.getDropoffLocation(),
                         ride.getStatus(),
@@ -53,18 +50,14 @@ public class RideService {
 
     // Retrieves a ride by its ID and returns its response DTO.
     public RideResponse getRideById(Long id) {
-
         // Search for the ride using its ID.
         Optional<Ride> existingRide = rideRepository.findById(id);
-
         // Throw an exception if the requested ride does not exist.
         if (existingRide.isEmpty()) {
             throw new RideNotFoundException("Ride with id " + id + " not found");
         }
-
         // Retrieve the Ride entity after confirming it exists.
         Ride ride = existingRide.get();
-
         // Convert the Ride entity into a response DTO.
         // Return null for driverId when no driver has been assigned.
         RideResponse rideResponse = new RideResponse(
@@ -76,7 +69,6 @@ public class RideService {
                 ride.getStatus(),
                 ride.getRequestedAt()
         );
-
         // Return the ride details to the caller.
         return rideResponse;
     }
@@ -90,16 +82,34 @@ public class RideService {
                 .map(ride -> new RideResponse(
                         ride.getId(),
                         ride.getRider().getId(),
-
                         // Return null if no driver has been assigned to the ride.
                         ride.getDriver() == null ? null : ride.getDriver().getId(),
-
                         ride.getPickupLocation(),
                         ride.getDropoffLocation(),
                         ride.getStatus(),
                         ride.getRequestedAt()
                 ))
                 // Collect the converted DTOs into a list and return it.
+                .toList();
+    }
+
+    // Retrieves all rides assigned to a specific driver.
+    public List<RideResponse> getRidesByDriverId(Long driverId) {
+        // Fetch rides associated with the specified driver from the database.
+        return rideRepository.findByDriverId(driverId)
+                .stream()
+                // Convert each Ride entity into a RideResponse DTO.
+                .map(ride -> new RideResponse(
+                        ride.getId(),
+                        ride.getRider().getId(),
+                        // Retrieve the ID of the driver assigned to the ride.
+                        ride.getDriver().getId(),
+                        ride.getPickupLocation(),
+                        ride.getDropoffLocation(),
+                        ride.getStatus(),
+                        ride.getRequestedAt()
+                ))
+                // Collect the converted responses into a list.
                 .toList();
     }
 
@@ -133,11 +143,9 @@ public class RideService {
         ride.setPickupLocation(request.pickupLocation());
         ride.setDropoffLocation(request.dropoffLocation());
         ride.setStatus(RideStatus.REQUESTED);
-
         // Persist the ride. JPA generates its ID and requestedAt is
         // populated by the Ride entity's @PrePersist callback.
         Ride savedRide = rideRepository.save(ride);
-
         // Return a DTO rather than exposing the JPA entity directly.
         return new RideResponse(
                 savedRide.getId(),
