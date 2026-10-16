@@ -2,6 +2,7 @@ package com.preyansh.ridesharing.service;
 
 import com.preyansh.ridesharing.dto.RideRequest;
 import com.preyansh.ridesharing.dto.RideResponse;
+import com.preyansh.ridesharing.exception.InvalidRideStatusException;
 import com.preyansh.ridesharing.exception.RideNotFoundException;
 import com.preyansh.ridesharing.exception.UserNotFoundException;
 import com.preyansh.ridesharing.model.Ride;
@@ -147,6 +148,31 @@ public class RideService {
         // populated by the Ride entity's @PrePersist callback.
         Ride savedRide = rideRepository.save(ride);
         // Return a DTO rather than exposing the JPA entity directly.
+        return new RideResponse(
+                savedRide.getId(),
+                savedRide.getRider().getId(),
+                savedRide.getDriver() == null ? null : savedRide.getDriver().getId(),
+                savedRide.getPickupLocation(),
+                savedRide.getDropoffLocation(),
+                savedRide.getStatus(),
+                savedRide.getRequestedAt()
+        );
+    }
+
+    @Transactional
+    public RideResponse cancelRide(Long id) {
+        Optional<Ride> existingRide = rideRepository.findById(id);
+        if (existingRide.isEmpty()) {
+            throw new RideNotFoundException("Ride with id " + id + " not found");
+        }
+        Ride ride = existingRide.get();
+        if (ride.getStatus() == RideStatus.REQUESTED || ride.getStatus() == RideStatus.ACCEPTED) {
+            ride.setStatus(RideStatus.CANCELLED);
+        }
+        else {
+            throw new InvalidRideStatusException("Ride cannot be cancelled in its current state");
+        }
+        Ride savedRide = rideRepository.save(ride);
         return new RideResponse(
                 savedRide.getId(),
                 savedRide.getRider().getId(),
