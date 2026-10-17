@@ -5,9 +5,11 @@ import com.preyansh.ridesharing.dto.RideResponse;
 import com.preyansh.ridesharing.exception.InvalidRideStatusException;
 import com.preyansh.ridesharing.exception.RideNotFoundException;
 import com.preyansh.ridesharing.exception.UserNotFoundException;
+import com.preyansh.ridesharing.model.Driver;
 import com.preyansh.ridesharing.model.Ride;
 import com.preyansh.ridesharing.model.RideStatus;
 import com.preyansh.ridesharing.model.User;
+import com.preyansh.ridesharing.repository.DriverRepository;
 import com.preyansh.ridesharing.repository.RideRepository;
 import com.preyansh.ridesharing.repository.UserRepository;
 
@@ -23,11 +25,13 @@ public class RideService {
 
     private final RideRepository rideRepository;
     private final UserRepository userRepository;
+    private final DriverRepository driverRepository;
 
     // Constructor injection supplies the repositories required by this service.
-    public RideService(RideRepository rideRepository, UserRepository userRepository) {
+    public RideService(RideRepository rideRepository, UserRepository userRepository, DriverRepository driverRepository) {
         this.rideRepository = rideRepository;
         this.userRepository = userRepository;
+        this.driverRepository = driverRepository;
     }
 
     // Retrieves all rides and returns them as response DTOs.
@@ -182,5 +186,17 @@ public class RideService {
                 savedRide.getStatus(),
                 savedRide.getRequestedAt()
         );
+    }
+
+    @Transactional
+    public RideResponse acceptRide(Long rideId, Long driverId) {
+        Optional<Ride> existingRide = rideRepository.findById(rideId);
+        if (existingRide.isEmpty()) {
+            throw new RideNotFoundException("Ride with id " + rideId + " not found");
+        }
+        Ride ride = existingRide.get();
+        if (ride.getStatus() != RideStatus.REQUESTED) {
+            throw new InvalidRideStatusException("Ride cannot be accepted in its current state");
+        }
     }
 }
