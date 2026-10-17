@@ -2,13 +2,8 @@ package com.preyansh.ridesharing.service;
 
 import com.preyansh.ridesharing.dto.RideRequest;
 import com.preyansh.ridesharing.dto.RideResponse;
-import com.preyansh.ridesharing.exception.InvalidRideStatusException;
-import com.preyansh.ridesharing.exception.RideNotFoundException;
-import com.preyansh.ridesharing.exception.UserNotFoundException;
-import com.preyansh.ridesharing.model.Driver;
-import com.preyansh.ridesharing.model.Ride;
-import com.preyansh.ridesharing.model.RideStatus;
-import com.preyansh.ridesharing.model.User;
+import com.preyansh.ridesharing.exception.*;
+import com.preyansh.ridesharing.model.*;
 import com.preyansh.ridesharing.repository.DriverRepository;
 import com.preyansh.ridesharing.repository.RideRepository;
 import com.preyansh.ridesharing.repository.UserRepository;
@@ -163,20 +158,32 @@ public class RideService {
         );
     }
 
+    // Cancels a ride if its current status allows cancellation.
+    // @Transactional ensures database changes are handled within one transaction.
     @Transactional
     public RideResponse cancelRide(Long id) {
+        // Finds the ride by its ID.
         Optional<Ride> existingRide = rideRepository.findById(id);
+        // Throws an exception if the requested ride does not exist.
         if (existingRide.isEmpty()) {
             throw new RideNotFoundException("Ride with id " + id + " not found");
         }
+        // Retrieves the ride entity from the Optional.
         Ride ride = existingRide.get();
-        if (ride.getStatus() == RideStatus.REQUESTED || ride.getStatus() == RideStatus.ACCEPTED) {
+        // Allows cancellation only when the ride is REQUESTED or ACCEPTED.
+        if (ride.getStatus() == RideStatus.REQUESTED
+                || ride.getStatus() == RideStatus.ACCEPTED) {
+
+            // Updates the ride status to CANCELLED.
             ride.setStatus(RideStatus.CANCELLED);
-        }
-        else {
+        } else {
+            // Rejects cancellation when the ride is in an unsupported state.
             throw new InvalidRideStatusException("Ride cannot be cancelled in its current state");
         }
+        // Saves the updated ride to the database.
         Ride savedRide = rideRepository.save(ride);
+        // Converts the saved ride entity into a RideResponse DTO.
+        // Returns the driver's ID when assigned, or null when no driver is assigned.
         return new RideResponse(
                 savedRide.getId(),
                 savedRide.getRider().getId(),
@@ -188,15 +195,55 @@ public class RideService {
         );
     }
 
+    // Accepts a requested ride for a driver who is currently available.
+    // @Transactional ensures the database changes are committed together
+    // or rolled back if an unchecked exception occurs.
     @Transactional
     public RideResponse acceptRide(Long rideId, Long driverId) {
+        // Finds the ride by ID.
         Optional<Ride> existingRide = rideRepository.findById(rideId);
+        // Throws an exception if the requested ride does not exist.
         if (existingRide.isEmpty()) {
             throw new RideNotFoundException("Ride with id " + rideId + " not found");
         }
+        // Retrieves the ride entity from the Optional.
         Ride ride = existingRide.get();
+        // Only rides in the REQUESTED state can be accepted.
         if (ride.getStatus() != RideStatus.REQUESTED) {
             throw new InvalidRideStatusException("Ride cannot be accepted in its current state");
         }
+        // Finds the driver by ID.
+        Optional<Driver> existingDriver = driverRepository.findById(driverId);
+        // Throws an exception if the requested driver does not exist.
+        if (existingDriver.isEmpty()) {
+            throw new DriverNotFoundException("Driver with id " + driverId + " not found");
+        }
+        // Retrieves the driver entity from the Optional.
+        Driver driver = existingDriver.get();
+        // Ensures that only an AVAILABLE driver can accept a ride.
+        if (driver.getStatus() != DriverStatus.AVAILABLE) {
+            throw new InvalidDriverStatusException("Driver with id " + driverId + " is not available to accept a ride");
+        }
+        // Assigns the driver to the ride.
+        ride.setDriver(driver);
+        // Updates the ride status to ACCEPTED.
+        ride.setStatus(RideStatus.ACCEPTED);
+        // Marks the driver as BUSY because they have accepted a ride.
+        driver.setStatus(DriverStatus.BUSY);
+        // Saves the updated ride, including its assigned driver and status.
+        Ride savedRide = rideRepository.save(ride);
+        // Saves the driver's updated BUSY status.
+        driverRepository.save(driver);
+        // Converts the saved ride entity into a RideResponse DTO.
+        // Returns IDs and ride details instead of exposing the full entities.
+        return new RideResponse(
+                savedRide.getId(),
+                savedRide.getRider().getId(),
+                savedRide.getDriver().getId(),
+                savedRide.getPickupLocation(),
+                savedRide.getDropoffLocation(),
+                savedRide.getStatus(),
+                savedRide.getRequestedAt()
+        );
     }
 }
