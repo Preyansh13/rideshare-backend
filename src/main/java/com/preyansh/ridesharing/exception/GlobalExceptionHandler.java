@@ -115,11 +115,25 @@ public class GlobalExceptionHandler {
                 .body(errorResponse);
     }
 
+    // Handles requests for drivers that do not exist in the database.
+    // Returns HTTP 404 Not Found with the exception message and request path.
     @ExceptionHandler(DriverNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleDriverNotFoundException(DriverNotFoundException ex, HttpServletRequest request) {
         ErrorResponse errorResponse = new ErrorResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), request.getRequestURI());
+        // Returns HTTP 404 Not Found with the structured error response.
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
+                .body(errorResponse);
+    }
+
+    // Handles ride-acceptance requests when a driver is not available.
+    // Returns HTTP 409 Conflict because the operation conflicts with the driver's current status.
+    @ExceptionHandler(InvalidDriverStatusException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidDriverStatusException(InvalidDriverStatusException ex, HttpServletRequest request) {
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.value(), ex.getMessage(), request.getRequestURI());
+        // Returns HTTP 409 Conflict with the structured error response.
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
                 .body(errorResponse);
     }
 }
