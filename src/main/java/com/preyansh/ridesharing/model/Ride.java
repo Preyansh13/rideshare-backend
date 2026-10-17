@@ -46,7 +46,6 @@ public class Ride {
 
     // No-argument constructor required by JPA.
     public Ride() {
-
     }
 
     // Runs before a new Ride entity is inserted into the database.

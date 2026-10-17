@@ -11,7 +11,6 @@ public class Driver {
 
     // Marks this field as the primary key of the drivers table.
     @Id
-
     // Lets the database generate the ID when a new driver is inserted.
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -40,7 +39,6 @@ public class Driver {
 
     // No-argument constructor required by JPA when loading entities.
     public Driver() {
-
     }
 
     // Returns the driver's primary key.

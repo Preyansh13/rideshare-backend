@@ -1,5 +1,6 @@
 package com.preyansh.ridesharing.exception;
 
+import com.preyansh.ridesharing.model.Driver;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -111,6 +112,14 @@ public class GlobalExceptionHandler {
         // Returns HTTP 409 Conflict because the requested operation conflicts with the ride's current state.
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
+                .body(errorResponse);
+    }
+
+    @ExceptionHandler(DriverNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleDriverNotFoundException(DriverNotFoundException ex, HttpServletRequest request) {
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), request.getRequestURI());
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
                 .body(errorResponse);
     }
 }
