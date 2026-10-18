@@ -80,4 +80,16 @@ public class RideController {
         // Return the updated ride details with a 200 status code.
         return ResponseEntity.ok(cancelledRide);
     }
+
+    // Accepts a ride for a specific driver.
+    // PATCH is used because this operation updates the existing ride's state.
+    @PatchMapping("/{rideId}/accept/{driverId}")
+    public ResponseEntity<RideResponse> acceptRide(@PathVariable Long rideId, @PathVariable Long driverId) {
+        // Calls the service layer to validate the ride and driver,
+        // assign the driver to the ride, and update their statuses.
+        RideResponse acceptedRide = rideService.acceptRide(rideId, driverId);
+        // Returns HTTP 200 OK along with the updated ride details.
+        return ResponseEntity.ok(acceptedRide);
+    }
+
 }
