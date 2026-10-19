@@ -196,8 +196,7 @@ public class RideService {
     }
 
     // Accepts a requested ride for a driver who is currently available.
-    // @Transactional ensures the database changes are committed together
-    // or rolled back if an unchecked exception occurs.
+    // @Transactional ensures the database changes are committed together or rolled back if an unchecked exception occurs.
     @Transactional
     public RideResponse acceptRide(Long rideId, Long driverId) {
         // Finds the ride by ID.
@@ -240,6 +239,46 @@ public class RideService {
                 savedRide.getId(),
                 savedRide.getRider().getId(),
                 savedRide.getDriver().getId(),
+                savedRide.getPickupLocation(),
+                savedRide.getDropoffLocation(),
+                savedRide.getStatus(),
+                savedRide.getRequestedAt()
+        );
+    }
+
+    // Rejects a requested ride for a driver.
+    @Transactional
+    public RideResponse rejectRide(Long rideId, Long driverId) {
+        // Finds the ride using its ID.
+        Optional<Ride> existingRide = rideRepository.findById(rideId);
+        // Throws an exception if the ride does not exist.
+        if (existingRide.isEmpty()) {
+            throw new RideNotFoundException("Ride with id " + rideId + " not found");
+        }
+        // Retrieves the ride entity from the Optional.
+        Ride ride = existingRide.get();
+        // Only rides in the REQUESTED state can be rejected.
+        if (ride.getStatus() != RideStatus.REQUESTED) {
+            throw new InvalidRideStatusException("Ride cannot be rejected in its current state");
+        }
+        // Finds the driver using the driver's ID.
+        Optional<Driver> existingDriver = driverRepository.findById(driverId);
+        // Throws an exception if the driver does not exist.
+        if (existingDriver.isEmpty()) {
+            throw new DriverNotFoundException("Driver with id " + driverId + " not found");
+        }
+        // Changes the ride status to REJECTED.
+        // The driver remains AVAILABLE because rejecting a ride does not mean the driver has accepted or started it.
+        ride.setStatus(RideStatus.REJECTED);
+        // Saves the updated ride status in the database.
+        Ride savedRide = rideRepository.save(ride);
+        // Converts the saved Ride entity into a RideResponse DTO.
+        // This returns only the required ride details instead of the full entity.
+        return new RideResponse(
+                savedRide.getId(),
+                savedRide.getRider().getId(),
+                // Handles rides without an assigned driver.
+                savedRide.getDriver() == null ? null : savedRide.getDriver().getId(),
                 savedRide.getPickupLocation(),
                 savedRide.getDropoffLocation(),
                 savedRide.getStatus(),
