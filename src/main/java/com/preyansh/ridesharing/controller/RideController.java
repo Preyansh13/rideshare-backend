@@ -92,4 +92,12 @@ public class RideController {
         return ResponseEntity.ok(acceptedRide);
     }
 
+    // Rejects a ride request for a specific driver.
+    @PatchMapping("/{rideId}/reject/{driverId}")
+    public ResponseEntity<RideResponse> rejectRide(@PathVariable Long rideId, @PathVariable Long driverId) {
+        // Calls the service layer to validate and reject the ride.
+        RideResponse rejectedRide = rideService.rejectRide(rideId, driverId);
+        // Returns HTTP 200 OK with the updated ride details.
+        return ResponseEntity.ok(rejectedRide);
+    }
 }
