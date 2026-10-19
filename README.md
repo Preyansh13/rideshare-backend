@@ -1,6 +1,6 @@
 # RideShare Backend
 
-A ride-sharing backend built with **Java 21, Spring Boot, Spring Data JPA, PostgreSQL, and REST APIs**. The project follows a layered monolithic architecture and focuses on building a strong foundation for ride management, driver assignment, and ride lifecycle operations.
+A ride-sharing backend built with **Java 21, Spring Boot, Spring Data JPA, PostgreSQL, and REST APIs**. This project follows a layered monolithic architecture and focuses on user management, driver and vehicle management, ride assignment, and ride lifecycle operations.
 
 ## Tech Stack
 
@@ -11,10 +11,10 @@ A ride-sharing backend built with **Java 21, Spring Boot, Spring Data JPA, Postg
 - **Build Tool:** Maven
 - **API Design:** REST APIs
 - **Validation:** Jakarta Bean Validation
-- **Testing:** Postman
+- **API Testing:** Postman
 - **Development Environment:** IntelliJ IDEA
 
-## Current Features
+## Features
 
 ### 1. User Management
 
@@ -25,50 +25,60 @@ A ride-sharing backend built with **Java 21, Spring Boot, Spring Data JPA, Postg
 - PostgreSQL persistence using Spring Data JPA
 - Application-level and database-level email uniqueness
 - User roles: `RIDER` and `DRIVER`
-- User search by name and email
+- Search users by name and email
 - Pagination and sorting
+- Structured exception handling for missing users and duplicate email addresses
 
-### 2. Driver & Vehicle Domain
+### 2. Driver Management
 
-- Driver entity linked to User
-- Driver availability statuses: `AVAILABLE`, `BUSY`, `OFFLINE`
+- Driver entity linked to a user
+- Driver registration with user, vehicle, and license information
+- Driver availability states: `AVAILABLE`, `BUSY`, and `OFFLINE`
+- Driver lookup and validation during ride acceptance
+- Custom exceptions for missing drivers and invalid driver states
+- PostgreSQL relationships and uniqueness constraints
+
+### 3. Vehicle Management
+
 - Vehicle entity with a unique registration number
-- Vehicle type classification: `HATCHBACK`, `SEDAN`, `SUV`, `MUV`
-- Driver-to-Vehicle relationship
+- Vehicle type classification: `HATCHBACK`, `SEDAN`, `SUV`, and `MUV`
+- Driver-to-vehicle relationship
 - Database-level foreign key and uniqueness constraints
 
-### 3. Ride Management
+### 4. Ride Management
 
-- Ride entity with rider and optional driver relationships
-- Ride status management using an enum
+- Ride entity linked to a rider and optionally to an assigned driver
+- Ride lifecycle represented by a `RideStatus` enum
 - Automatic ride request timestamp
-- Create ride API
-- Retrieve a ride by ID
-- Retrieve all rides
-- Retrieve rides by rider ID
-- Filter rides by driver ID
+- Create and retrieve ride requests
+- Retrieve rides by ID, rider ID, and driver ID
 - Filter rides by status
 - Cancel rides when their current status permits cancellation
-- Transaction-managed ride creation and cancellation
-- Custom exceptions for missing rides and invalid ride status transitions
+- Accept requested rides for available drivers
+- Assign drivers to accepted rides
+- Update ride and driver statuses during acceptance
+- Transaction-managed ride creation, cancellation, and acceptance
 - DTO-based ride responses
 
-### 4. Validation & Error Handling
+### 5. Validation and Error Handling
 
-- Request validation using Jakarta Bean Validation
-- Required-field validation for name, email, and phone
+- Jakarta Bean Validation for request data
+- Required-field validation for names, emails, and phone numbers
 - Email format validation
 - 10-digit phone number validation
 - Custom validation messages
 - Global exception handling
 - Structured API error responses
 - Multiple field-level validation errors
-- Handling for `400 Bad Request`, `404 Not Found`, and `409 Conflict`
+- HTTP `400 Bad Request`, `404 Not Found`, and `409 Conflict` handling
 - Database constraint violation handling
+- Business-rule validation for ride acceptance and cancellation
 
-## API Endpoints
+## API Documentation
 
-The following endpoints have been implemented.
+Base URL for local development:
+
+`http://localhost:8080`
 
 ### User APIs
 
@@ -82,6 +92,14 @@ The following endpoints have been implemented.
 | DELETE | `/api/users/{id}` | Delete a user |
 | GET | `/api/users/search` | Search users by name or email |
 
+### Driver APIs
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST | `/api/drivers` | Register a driver with user, vehicle, and license details |
+
+The driver registration endpoint uses the existing driver, user, and vehicle domain models. Additional driver retrieval, update, and availability endpoints can be documented once implemented and verified.
+
 ### Ride APIs
 
 | Method | Endpoint | Purpose |
@@ -92,24 +110,67 @@ The following endpoints have been implemented.
 | GET | `/api/rides/rider/{riderId}` | Retrieve rides belonging to a rider |
 | GET | `/api/rides/driver/{driverId}` | Retrieve rides assigned to a driver |
 | GET | `/api/rides/status/{status}` | Filter rides by status |
-| PATCH | `/api/rides/{id}/cancel` | Cancel a ride if its status permits |
+| PATCH | `/api/rides/{id}/cancel` | Cancel a ride when its status permits |
+| PATCH | `/api/rides/{rideId}/accept/{driverId}` | Accept a requested ride as a driver |
 
-Example requests:
+### Example Requests
 
 ```http
-GET   /api/rides
+GET   /api/users
+GET   /api/users/search?name=Rahul
+POST  /api/drivers
+POST  /api/rides
 GET   /api/rides/1
 GET   /api/rides/rider/8
 GET   /api/rides/driver/1
 GET   /api/rides/status/REQUESTED
 PATCH /api/rides/1/cancel
+PATCH /api/rides/2/accept/1
 ```
 
-Ride cancellation is allowed for rides in `REQUESTED` or `ACCEPTED` status. Attempts to cancel rides in other states are rejected with a conflict response.
+Use IDs that exist in your database when testing. The example IDs above are illustrative.
+
+## Ride Lifecycle
+
+The `RideStatus` enum currently includes:
+
+- `REQUESTED`
+- `ACCEPTED`
+- `IN_PROGRESS`
+- `COMPLETED`
+- `CANCELLED`
+- `REJECTED`
+
+### Driver Acceptance
+
+The endpoint `PATCH /api/rides/{rideId}/accept/{driverId}` validates the ride and driver before updating their states.
+
+**Business rules:**
+
+1. The ride must exist.
+2. The ride must have `REQUESTED` status.
+3. The driver must exist.
+4. The driver must have `AVAILABLE` status.
+5. On successful acceptance, the driver is assigned to the ride, the ride becomes `ACCEPTED`, and the driver's status becomes `BUSY`.
+
+**Verified scenarios:**
+
+- Successful acceptance returns `200 OK`.
+- The ride changes to `ACCEPTED`.
+- The driver is assigned to the ride and becomes `BUSY`.
+- Attempting to accept a cancelled ride returns `409 Conflict`.
+- Attempting to accept another ride with a busy driver returns `409 Conflict`.
+- After a busy-driver rejection, the new ride remains `REQUESTED` and unassigned.
+
+### Ride Cancellation
+
+Ride cancellation is permitted for rides in `REQUESTED` or `ACCEPTED` status. Attempts to cancel rides in other states are rejected with a conflict response.
+
+**Known improvement:** Cancelling an accepted ride should also return the assigned driver's status to `AVAILABLE`. This consistency rule remains a planned improvement.
 
 ## Architecture
 
-The application currently follows a **layered monolithic architecture**.
+The project follows a **layered monolithic architecture**.
 
 ```text
 Client / Postman
@@ -145,48 +206,48 @@ Ride
  └── Driver (optional)
 ```
 
-- A `User` can have the role `RIDER` or `DRIVER`.
-- A `Driver` stores driver-specific information, including a license number and availability status.
-- A `Vehicle` stores vehicle information and is associated with a driver according to the domain relationships.
-- A `Ride` represents a ride request associated with a rider and, optionally, an assigned driver.
-- A `RideStatus` enum represents the ride lifecycle, including `REQUESTED`, `ACCEPTED`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`, and `REJECTED`.
+- `User` represents a person using the platform.
+- `Driver` stores driver-specific information, including license number and availability status.
+- `Vehicle` stores vehicle information and is associated with a driver through the domain relationship.
+- `Ride` represents a request associated with a rider and, optionally, an assigned driver.
 
-The project is currently a **monolithic application, not a microservices architecture**. API Gateway, service discovery, and microservices are potential future enhancements.
+The project is currently a **monolithic application, not a microservices architecture**. API Gateway, service discovery, and a potential transition to microservices are future architectural considerations, not current features.
 
 ## Project Status
 
-🚧 **Under active development**
+**Status: Under active development**
 
-### Completed
+### Implemented
 
-- User management and CRUD operations
+- User CRUD APIs
 - DTO-based API design
-- Input validation and global exception handling
+- Request validation and global exception handling
 - Search, pagination, and sorting
 - Application-level and database-level email uniqueness
-- User roles and driver availability status
-- Driver and Vehicle domain entities
+- User roles and driver availability states
+- Driver and vehicle domain entities
 - PostgreSQL relationships and constraints
-- Ride entity and status model
-- Create ride API
-- Retrieve ride by ID and retrieve all rides
-- Retrieve rides by rider ID
-- Filter rides by status and driver ID
+- Driver registration API
+- Ride creation and retrieval APIs
+- Ride filtering by rider, driver, and status
 - Ride cancellation with status validation
-- Custom exception handling for invalid ride status transitions
-- Postman testing of implemented ride retrieval, filtering, and cancellation flows
+- Driver acceptance of requested rides
+- Driver assignment and availability updates during acceptance
+- Custom exceptions for invalid ride and driver states
+- Postman verification of ride acceptance and busy-driver rejection
 
 ### Current Focus
 
-Expanding ride lifecycle operations, particularly driver assignment and ride status transitions.
+Expanding ride lifecycle operations and strengthening consistency across ride and driver status transitions.
 
 ### Planned Features
 
 #### Ride Lifecycle
 
-- Driver acceptance and rejection of ride requests
-- Ride start and completion
-- Driver availability updates during the ride lifecycle
+- Driver rejection of ride requests
+- Start and complete rides
+- Synchronize driver availability throughout the ride lifecycle
+- Release a driver when an accepted ride is cancelled
 - Fare calculation
 - Ride history and additional filtering
 
@@ -196,22 +257,23 @@ Expanding ride lifecycle operations, particularly driver assignment and ride sta
 - Testcontainers with PostgreSQL
 - Database indexing and query optimization
 - Transaction management improvements
+- Concurrency control for simultaneous ride acceptance
 - Swagger / OpenAPI documentation
 
-#### Security & Performance
+#### Security and Performance
 
 - Spring Security and JWT authentication
-- Redis caching
 - Role-based authorization
+- Redis caching
 
-#### Deployment & Architecture
+#### Deployment and Architecture
 
 - Docker containerization
 - CI/CD pipeline
 - Cloud deployment
 - Centralized logging and monitoring
 - API Gateway and service discovery
-- Gradual transition to microservices, if justified by system requirements
+- Gradual transition to microservices if justified by system requirements
 
 ## Running Locally
 
@@ -221,34 +283,32 @@ Expanding ride lifecycle operations, particularly driver assignment and ride sta
 - Maven
 - PostgreSQL
 
-### Steps
-
-**1. Clone the repository**
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/Preyansh13/rideshare-backend.git
 cd rideshare-backend
 ```
 
-**2. Configure PostgreSQL**
+### 2. Configure PostgreSQL
 
 Create the required database and configure the database connection in your local application configuration.
 
 Use environment variables or an untracked configuration file for credentials. Never commit database passwords, API keys, or other secrets.
 
-**3. Start the application**
+### 3. Start the Application
 
 ```bash
 mvn spring-boot:run
 ```
 
-**4. Test the APIs**
+### 4. Test the APIs
 
 Use Postman to send requests to the locally running application, typically at `http://localhost:8080`.
 
 ## Learning Objectives
 
-This project is being developed to strengthen practical backend engineering skills, including:
+This project is designed to strengthen practical backend engineering skills, including:
 
 - Java and object-oriented programming
 - Spring Boot REST API development
@@ -257,6 +317,7 @@ This project is being developed to strengthen practical backend engineering skil
 - PostgreSQL relationships and constraints
 - DTOs, validation, and exception handling
 - Transaction management and business-rule validation
+- Ride lifecycle and state-transition design
 - API testing and debugging
 - Git-based incremental development
-- Backend scalability and system design fundamentals
+- Concurrency handling and backend system design fundamentals
