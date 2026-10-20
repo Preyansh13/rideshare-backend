@@ -293,4 +293,37 @@ public class RideService {
                 savedRide.getRequestedAt()
         );
     }
+
+    // Starts a ride that has already been accepted by a driver.
+    @Transactional
+    public RideResponse startRide(Long rideId) {
+        // Find the ride using its ID.
+        Optional<Ride> existingRide = rideRepository.findById(rideId);
+        // Throw an exception if the requested ride does not exist.
+        if (existingRide.isEmpty()) {
+            throw new RideNotFoundException("Ride with id " + rideId + " not found");
+        }
+        // Retrieve the ride entity after confirming it exists.
+        Ride ride = existingRide.get();
+        // Only an ACCEPTED ride can be started.
+        if (ride.getStatus() != RideStatus.ACCEPTED) {
+            throw new InvalidRideStatusException("Ride cannot be started in its current state");
+        }
+        // Update the ride status because the journey has started.
+        ride.setStatus(RideStatus.IN_PROGRESS);
+        // Save the updated ride in the database.
+        Ride savedRide = rideRepository.save(ride);
+        // Convert the saved ride entity into a response DTO.
+        // Return null for driverId if no driver is assigned.
+        return new RideResponse(
+                savedRide.getId(),
+                savedRide.getRider().getId(),
+                savedRide.getDriver() == null ? null : savedRide.getDriver().getId(),
+                savedRide.getPickupLocation(),
+                savedRide.getDropoffLocation(),
+                savedRide.getStatus(),
+                savedRide.getRequestedAt()
+        );
+    }
+
 }
