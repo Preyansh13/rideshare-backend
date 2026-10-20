@@ -100,4 +100,13 @@ public class RideController {
         // Returns HTTP 200 OK with the updated ride details.
         return ResponseEntity.ok(rejectedRide);
     }
+
+    //Starts a ride
+    @PatchMapping("/{rideId}/start")
+    public ResponseEntity<RideResponse> startRide(@PathVariable Long rideId) {
+        // Call the service layer to validate the ride's current status and update its status from ACCEPTED to IN_PROGRESS.
+        RideResponse startedRide = rideService.startRide(rideId);
+        // Return HTTP 200 OK with the updated RideResponse in the body.
+        return ResponseEntity.ok(startedRide);
+    }
 }
