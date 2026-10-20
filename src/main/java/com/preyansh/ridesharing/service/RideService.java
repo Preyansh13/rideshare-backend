@@ -171,12 +171,20 @@ public class RideService {
         // Retrieves the ride entity from the Optional.
         Ride ride = existingRide.get();
         // Allows cancellation only when the ride is REQUESTED or ACCEPTED.
-        if (ride.getStatus() == RideStatus.REQUESTED
-                || ride.getStatus() == RideStatus.ACCEPTED) {
-
+        if (ride.getStatus() == RideStatus.REQUESTED || ride.getStatus() == RideStatus.ACCEPTED) {
+            // If the ride was accepted, restore the assigned driver's availability.
+            if (ride.getStatus() == RideStatus.ACCEPTED && ride.getDriver() != null) {
+                // Retrieves the driver assigned to this ride.
+                Driver driver = ride.getDriver();
+                // Makes the driver available for another ride.
+                driver.setStatus(DriverStatus.AVAILABLE);
+                // Saves the updated driver status in the database.
+                driverRepository.save(driver);
+            }
             // Updates the ride status to CANCELLED.
             ride.setStatus(RideStatus.CANCELLED);
-        } else {
+        }
+        else {
             // Rejects cancellation when the ride is in an unsupported state.
             throw new InvalidRideStatusException("Ride cannot be cancelled in its current state");
         }
