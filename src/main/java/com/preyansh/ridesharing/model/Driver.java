@@ -19,22 +19,24 @@ public class Driver {
     // The user_id column stores the associated user's foreign key.
     // unique = true ensures that a user can be associated with at most one driver.
     @OneToOne
-    @JoinColumn(name = "user_id", unique = true)
+    @JoinColumn(name = "user_id", unique = true, nullable = false)
     private User user;
 
     // Defines a one-to-one relationship between a driver and a vehicle.
     // The vehicle_id column stores the associated vehicle's foreign key.
     // unique = true ensures that a vehicle can be associated with at most one driver.
     @OneToOne
-    @JoinColumn(name = "vehicle_id", unique = true)
+    @JoinColumn(name = "vehicle_id", unique = true, nullable = false)
     private Vehicle vehicle;
 
     // Driving license number associated with the driver.
+    @Column(nullable = false, unique = true)
     private String licenseNumber;
 
     // Stores the driver's status as a string in the database
     // rather than as the enum's numeric ordinal.
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private DriverStatus status;
 
     // No-argument constructor required by JPA when loading entities.
