@@ -2,6 +2,7 @@ package com.preyansh.ridesharing.controller;
 
 import com.preyansh.ridesharing.dto.RideRequest;
 import com.preyansh.ridesharing.dto.RideResponse;
+import com.preyansh.ridesharing.model.Ride;
 import com.preyansh.ridesharing.model.RideStatus;
 import com.preyansh.ridesharing.service.RideService;
 
@@ -108,5 +109,15 @@ public class RideController {
         RideResponse startedRide = rideService.startRide(rideId);
         // Return HTTP 200 OK with the updated RideResponse in the body.
         return ResponseEntity.ok(startedRide);
+    }
+
+    //Completes a ride
+    @PatchMapping("/{rideId}/complete")
+    public ResponseEntity<RideResponse> completeRide(@PathVariable Long rideId) {
+        // Call the service layer to complete the ride.
+        // The service validates the current ride status, changes it to COMPLETED,  and changes the assigned driver's status to AVAILABLE.
+        RideResponse completedRide = rideService.completeRide(rideId);
+        // Return HTTP 200 OK along with the updated ride details in the response body.
+        return ResponseEntity.ok(completedRide);
     }
 }
