@@ -326,4 +326,41 @@ public class RideService {
         );
     }
 
+    //Completes the in progress ride.
+    @Transactional
+    public RideResponse completeRide(Long rideId) {
+        // Find the ride by its ID.
+        Optional<Ride> existingRide = rideRepository.findById(rideId);
+        // Throw an exception if the ride does not exist.
+        if (existingRide.isEmpty()) {
+            throw new RideNotFoundException("Ride with id " + rideId + " not found");
+        }
+        Ride ride = existingRide.get();
+        // Only an in-progress ride can be completed.
+        if (ride.getStatus() != RideStatus.IN_PROGRESS) {
+            throw new InvalidRideStatusException("Ride cannot be completed in its current state");
+        }
+        // Ensure the ride has an assigned driver before completing it.
+        if (ride.getDriver() == null) {
+            throw new InvalidRideStatusException("Ride cannot be completed because no driver is assigned");
+        }
+        // Mark the ride as completed.
+        ride.setStatus(RideStatus.COMPLETED);
+        // Make the assigned driver available for another ride.
+        Driver driver = ride.getDriver();
+        driver.setStatus(DriverStatus.AVAILABLE);
+        driverRepository.save(driver);
+        // Save the updated ride.
+        Ride savedRide = rideRepository.save(ride);
+        // Convert the saved entity into a response DTO.
+        return new RideResponse(
+                savedRide.getId(),
+                savedRide.getRider().getId(),
+                savedRide.getDriver().getId(),
+                savedRide.getPickupLocation(),
+                savedRide.getDropoffLocation(),
+                savedRide.getStatus(),
+                savedRide.getRequestedAt()
+        );
+    }
 }
