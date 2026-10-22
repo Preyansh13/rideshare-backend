@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
-// Contains the business logic for creating rides.
+// Contains the business logic for rides requests.
 @Service
 public class RideService {
 
@@ -133,6 +133,8 @@ public class RideService {
                 .toList();
     }
 
+    // Creates a ride.
+    // @Transactional ensures database changes are handled within one transaction.
     @Transactional
     public RideResponse createRide(RideRequest request) {
         User rider = userRepository.findById(request.riderId())
@@ -208,7 +210,7 @@ public class RideService {
     @Transactional
     public RideResponse acceptRide(Long rideId, Long driverId) {
         // Finds the ride by ID.
-        Optional<Ride> existingRide = rideRepository.findById(rideId);
+        Optional<Ride> existingRide = rideRepository.findByIdForUpdate(rideId);
         // Throws an exception if the requested ride does not exist.
         if (existingRide.isEmpty()) {
             throw new RideNotFoundException("Ride with id " + rideId + " not found");
@@ -220,7 +222,7 @@ public class RideService {
             throw new InvalidRideStatusException("Ride cannot be accepted in its current state");
         }
         // Finds the driver by ID.
-        Optional<Driver> existingDriver = driverRepository.findById(driverId);
+        Optional<Driver> existingDriver = driverRepository.findByIdForUpdate(driverId);
         // Throws an exception if the requested driver does not exist.
         if (existingDriver.isEmpty()) {
             throw new DriverNotFoundException("Driver with id " + driverId + " not found");
