@@ -1,6 +1,5 @@
 package com.preyansh.ridesharing.exception;
 
-import com.preyansh.ridesharing.model.Driver;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -73,15 +72,11 @@ public class GlobalExceptionHandler {
                 .body(errorResponse);
     }
 
-    // Handles database integrity violations, such as a duplicate value
-    // violating a unique constraint.
+    // Handles database integrity violations.
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(DataIntegrityViolationException ex, HttpServletRequest request) {
-        // Returns HTTP 409 Conflict with a generic email-conflict message.
-        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.value(), "Email already exists", request.getRequestURI());
-        return ResponseEntity
-                .status(HttpStatus.CONFLICT)
-                .body(errorResponse);
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.value(), "Database constraint violation", request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
     }
 
     // Handles requests for vehicles that cannot be found.
@@ -91,6 +86,28 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), request.getRequestURI());
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
+                .body(errorResponse);
+    }
+
+    // Handles attempts to register a vehicle with an existing registration number.
+    @ExceptionHandler(VehicleAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleVehicleAlreadyExistsException(VehicleAlreadyExistsException ex, HttpServletRequest request) {
+        // Creates an error response with HTTP 409 Conflict.
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.value(), ex.getMessage(), request.getRequestURI());
+        // Returns the error response with HTTP 409 status.
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(errorResponse);
+    }
+
+    // Handles attempts to delete a vehicle that is assigned to a driver.
+    @ExceptionHandler(VehicleInUseException.class)
+    public ResponseEntity<ErrorResponse> handleVehicleInUseException(VehicleInUseException ex, HttpServletRequest request) {
+        // Creates an error response with HTTP 409 Conflict.
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.value(), ex.getMessage(), request.getRequestURI());
+        // Returns the conflict response.
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
                 .body(errorResponse);
     }
 

@@ -15,4 +15,7 @@ public interface DriverRepository extends JpaRepository<Driver, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT d FROM Driver d WHERE d.id = :id")
     Optional<Driver> findByIdForUpdate(@Param("id") Long id);
+    // Checks whether a vehicle is already assigned to a driver.
+    // Used to prevent deletion of an assigned vehicle.
+    boolean existsByVehicle_Id(Long vehicleId);
 }
