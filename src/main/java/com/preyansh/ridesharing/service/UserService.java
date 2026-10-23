@@ -13,225 +13,149 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
-// Marks this class as a Spring service component containing business logic.
+// Contains business logic for user operations.
 @Service
 public class UserService {
 
-    // Repository used to perform database operations on User entities.
     private final UserRepository userRepository;
 
-    // Constructor injection allows Spring to provide the UserRepository dependency.
+    // Injects the UserRepository dependency.
     public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 
-    // Retrieves users using pagination and converts each User entity into a UserResponse DTO.
+    // Retrieves a page of users and converts each entity into a response DTO.
     public Page<UserResponse> getUsers(Pageable pageable) {
         return userRepository.findAll(pageable)
-                .map(user -> {
-                    UserResponse userResponse = new UserResponse();
-
-                    // Copies the required entity fields into the response DTO.
-                    userResponse.setId(user.getId());
-                    userResponse.setName(user.getName());
-                    userResponse.setEmail(user.getEmail());
-                    userResponse.setPhone(user.getPhone());
-
-                    return userResponse;
-                });
+                .map(this::toResponse);
     }
 
-    // Retrieves a user by ID and returns the corresponding response DTO.
+    // Retrieves a user by ID or throws an exception if not found.
     public UserResponse getUserById(Long id) {
-
-        // findById() returns an Optional because the user may not exist.
-        Optional<User> existingUser = userRepository.findById(id);
-
-        // Throws a custom exception if no user exists with the requested ID.
-        if (existingUser.isEmpty()) {
-            throw new UserNotFoundException("User with id " + id + " not found");
-        }
-
-        // Extracts the User entity after confirming that it exists.
-        User user = existingUser.get();
-
-        // Converts the entity into a response DTO.
-        UserResponse userResponse = new UserResponse();
-        userResponse.setId(user.getId());
-        userResponse.setName(user.getName());
-        userResponse.setEmail(user.getEmail());
-        userResponse.setPhone(user.getPhone());
-
-        return userResponse;
+        return toResponse(findUserOrThrow(id));
     }
 
-    // Creates a new user after checking whether the email is already registered.
+    // Creates a user after normalizing and checking the email.
     public UserResponse createUser(UserRequest userRequest) {
-
-        // Checks for an existing user with the same email address.
-        Optional<User> existingUser = userRepository.findByEmail(userRequest.getEmail());
+        // Normalizes the email before checking uniqueness and saving.
+        String email = normalizeEmail(userRequest.getEmail());
+        Optional<User> existingUser = userRepository.findByEmail(email);
         if (existingUser.isPresent()) {
-            throw new UserAlreadyExistsException("User with this email already exists");
+            throw new UserAlreadyExistsException(
+                    "User with this email already exists");
         }
-
-        // Creates a User entity and copies the incoming request data into it.
+        if (userRepository.existsByPhone(userRequest.getPhone())) {
+            throw new UserAlreadyExistsException(
+                    "User with this phone number already exists");
+        }
+        // Creates a User entity from the request data.
         User user = new User();
         user.setName(userRequest.getName());
-        user.setEmail(userRequest.getEmail());
+        user.setEmail(email);
         user.setPhone(userRequest.getPhone());
-
-        // Saves the new entity to the database.
+        // Saves the new user and returns its response DTO.
         User savedUser = userRepository.save(user);
-
-        // Converts the saved entity into a response DTO.
-        UserResponse userResponse = new UserResponse();
-        userResponse.setId(savedUser.getId());
-        userResponse.setName(savedUser.getName());
-        userResponse.setEmail(savedUser.getEmail());
-        userResponse.setPhone(savedUser.getPhone());
-
-        return userResponse;
+        return toResponse(savedUser);
     }
 
-    // Updates all editable user fields after checking the user's existence
-    // and ensuring the new email is not used by another user.
+    // Updates all editable fields after checking the user's existence
+    // and ensuring the normalized email is not used by another user.
     public UserResponse updateUser(Long id, UserRequest updatedUserRequest) {
-
-        // Retrieves the existing user by ID.
-        Optional<User> existingUser = userRepository.findById(id);
-
-        // Stops the update if the user does not exist.
-        if (existingUser.isEmpty()) {
-            throw new UserNotFoundException("User with id " + id + " not found");
+        User user = findUserOrThrow(id);
+        String email = normalizeEmail(updatedUserRequest.getEmail());
+        // Excludes the current user from the duplicate-email check.
+        if (userRepository.findByEmailAndIdNot(email, id).isPresent()) {
+            throw new UserAlreadyExistsException(
+                    "User with this email already exists");
         }
-
-        User user = existingUser.get();
-
-        // Checks whether another user already has the requested email.
-        // The current user's ID is excluded from this check.
-        Optional<User> existingUserWithEmail = userRepository.findByEmailAndIdNot(updatedUserRequest.getEmail(), id);
-
-        if (existingUserWithEmail.isPresent()) {
-            throw new UserAlreadyExistsException("User with this email already exists");
+        if (userRepository.existsByPhoneAndIdNot(
+                updatedUserRequest.getPhone(), id)) {
+            throw new UserAlreadyExistsException(
+                    "User with this phone number already exists");
         }
-
-        // Replaces the user's editable fields with the request values.
+        // Updates the user's editable fields.
         user.setName(updatedUserRequest.getName());
-        user.setEmail(updatedUserRequest.getEmail());
+        user.setEmail(email);
         user.setPhone(updatedUserRequest.getPhone());
-
-        // Persists the updated entity.
+        // Saves the updated entity and returns its response DTO.
         User updatedUser = userRepository.save(user);
-
-        // Converts the updated entity into a response DTO.
-        UserResponse userResponse = new UserResponse();
-
-        userResponse.setId(updatedUser.getId());
-        userResponse.setName(updatedUser.getName());
-        userResponse.setEmail(updatedUser.getEmail());
-        userResponse.setPhone(updatedUser.getPhone());
-
-        return userResponse;
+        return toResponse(updatedUser);
     }
 
-    // Deletes a user by ID after verifying that the user exists.
+    // Deletes a user after verifying that the user exists.
     public void deleteUser(Long id) {
-
-        // Checks whether a user exists with the specified ID.
-        Optional<User> existingUser = userRepository.findById(id);
-
-        // Throws an exception instead of silently deleting a nonexistent user.
-        if (existingUser.isEmpty()) {
-            throw new UserNotFoundException("User with id " + id + " not found");
-        }
-
-        // Deletes the user from the database.
-        userRepository.deleteById(id);
+        User user = findUserOrThrow(id);
+        userRepository.delete(user);
     }
 
-    // Partially updates a user's fields.
-    // Only fields that are not null in the request are updated.
+    // Partially updates a user's fields when values are supplied.
     public UserResponse patchUser(Long id, UserPatchRequest request) {
-
-        // Retrieves the existing user by ID.
-        Optional<User> existingUser = userRepository.findById(id);
-
-        // Stops the update if the user does not exist.
-        if (existingUser.isEmpty()) {
-            throw new UserNotFoundException("User with id " + id + " not found");
-        }
-
-        User user = existingUser.get();
-
-        // Updates the name only when a name was supplied.
+        User user = findUserOrThrow(id);
+        // Updates the name only if provided.
         if (request.getName() != null) {
             user.setName(request.getName());
         }
-
-        // Updates the email only when an email was supplied.
+        // Normalizes and checks the email only if provided.
         if (request.getEmail() != null) {
-
-            // Ensures another user does not already use the requested email.
-            Optional<User> existingUserWithEmail = userRepository.findByEmailAndIdNot(request.getEmail(), id);
-
-            if (existingUserWithEmail.isPresent()) {
-                throw new UserAlreadyExistsException("User with this email already exists");
+            String email = normalizeEmail(request.getEmail());
+            if (userRepository.findByEmailAndIdNot(email, id).isPresent()) {
+                throw new UserAlreadyExistsException(
+                        "User with this email already exists");
             }
-            user.setEmail(request.getEmail());
+            user.setEmail(email);
         }
-
-        // Updates the phone number only when a phone number was supplied.
+        // Updates the phone only if provided.
         if (request.getPhone() != null) {
+            if (userRepository.existsByPhoneAndIdNot(request.getPhone(), id)) {
+                throw new UserAlreadyExistsException(
+                        "User with this phone number already exists");
+            }
             user.setPhone(request.getPhone());
         }
-
-        // Saves the entity after applying the requested partial changes.
+        // Saves the partial changes and returns the response DTO.
         User updatedUser = userRepository.save(user);
-
-        // Converts the updated entity into a response DTO.
-        UserResponse userResponse = new UserResponse();
-
-        userResponse.setId(updatedUser.getId());
-        userResponse.setName(updatedUser.getName());
-        userResponse.setEmail(updatedUser.getEmail());
-        userResponse.setPhone(updatedUser.getPhone());
-
-        return userResponse;
+        return toResponse(updatedUser);
     }
 
-    // Searches for users whose names contain the supplied text, ignoring case.
+    // Searches for users by name, ignoring case.
     public List<UserResponse> searchUsersByName(String name) {
         return userRepository.findByNameContainingIgnoreCase(name)
                 .stream()
-                // Converts each matching User entity into a UserResponse DTO.
-                .map(user -> {
-                    UserResponse userResponse = new UserResponse();
-
-                    userResponse.setId(user.getId());
-                    userResponse.setName(user.getName());
-                    userResponse.setEmail(user.getEmail());
-                    userResponse.setPhone(user.getPhone());
-
-                    return userResponse;
-                }).toList();
+                .map(this::toResponse)
+                .toList();
     }
 
-    // Searches for users whose email addresses contain the supplied text, ignoring case.
+    // Searches for users by email, ignoring case.
     public List<UserResponse> searchUsersByEmail(String email) {
         return userRepository.findByEmailContainingIgnoreCase(email)
                 .stream()
-                // Converts each matching User entity into a UserResponse DTO.
-                .map(user -> {
-                    UserResponse userResponse = new UserResponse();
+                .map(this::toResponse)
+                .toList();
+    }
 
-                    userResponse.setId(user.getId());
-                    userResponse.setName(user.getName());
-                    userResponse.setEmail(user.getEmail());
-                    userResponse.setPhone(user.getPhone());
+    // Removes surrounding whitespace and converts an email to lowercase.
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
+    }
 
-                    return userResponse;
-                }).toList();
+    // Converts a User entity into a response DTO.
+    private UserResponse toResponse(User user) {
+        UserResponse response = new UserResponse();
+        response.setId(user.getId());
+        response.setName(user.getName());
+        response.setEmail(user.getEmail());
+        response.setPhone(user.getPhone());
+        return response;
+    }
+
+    // Finds a user or throws an exception if the user does not exist.
+    private User findUserOrThrow(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() ->
+                        new UserNotFoundException(
+                                "User with id " + id + " not found"));
     }
 }

@@ -72,7 +72,7 @@ public class UserController {
     // PATCH /api/users/{id}
     // Partially updates a user using the fields provided in the request.
     @PatchMapping("/{id}")
-    public ResponseEntity<UserResponse> patchUser(@PathVariable Long id, @RequestBody UserPatchRequest request) {
+    public ResponseEntity<UserResponse> patchUser(@PathVariable Long id, @Valid @RequestBody UserPatchRequest request) {
         UserResponse updatedUser = userService.patchUser(id, request);
         return ResponseEntity.ok(updatedUser);
     }
@@ -90,7 +90,12 @@ public class UserController {
     // GET /api/users/search/email?email=...
     // Searches for users by email and returns the matching users.
     @GetMapping("/search/email")
-    public List<UserResponse> searchUsersByEmail(@RequestParam String email) {
-        return userService.searchUsersByEmail(email);
+    public ResponseEntity<List<UserResponse>> searchUsersByEmail(
+            @RequestParam(required = false) String email) {
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Email search parameter cannot be empty");
+        }
+        return ResponseEntity.ok(userService.searchUsersByEmail(email));
     }
 }

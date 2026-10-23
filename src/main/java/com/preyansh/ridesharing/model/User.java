@@ -11,7 +11,6 @@ public class User {
 
     // Marks this field as the primary key of the users table.
     @Id
-
     // Lets the database generate the ID when a new user is inserted.
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -25,6 +24,7 @@ public class User {
     private String email;
 
     // Stores the user's phone number.
+    @Column(unique = true)
     private String phone;
 
     // Stores the user's role as a string, such as "RIDER" or "DRIVER",
