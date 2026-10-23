@@ -1,49 +1,54 @@
 package com.preyansh.ridesharing.dto;
 
-// DTO (Data Transfer Object) used to receive fields for a partial user update.
-// Clients can provide only the fields they want to change.
-public class UserPatchRequest {
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Pattern;
 
-    // Updated name, if provided in the request.
+// DTO for receiving fields in a partial user update.
+public class UserPatchRequest {
+    // Updated name; must not be blank if provided.
+    @Pattern(regexp = ".*\\S.*", message = "Name must not be blank")
     private String name;
 
-    // Updated email, if provided in the request.
+    // Updated email; must be valid if provided.
+    @Email(message = "Email must be valid")
+    @Pattern(regexp = ".*\\S.*", message = "Email must not be blank")
     private String email;
 
-    // Updated phone number, if provided in the request.
+    // Updated phone; must contain exactly 10 digits if provided.
+    @Pattern(regexp = "[0-9]{10}",
+            message = "Phone number must contain exactly 10 digits")
     private String phone;
 
-    // No-argument constructor, useful for mapping incoming JSON to this object.
+    // No-argument constructor for JSON deserialization.
     public UserPatchRequest() {
-
     }
 
-    // Returns the name supplied for the partial update.
+    // Returns the supplied name.
     public String getName() {
         return name;
     }
 
-    // Sets the name supplied for the partial update.
+    // Sets the name for the partial update.
     public void setName(String name) {
         this.name = name;
     }
 
-    // Returns the email supplied for the partial update.
+    // Returns the supplied email.
     public String getEmail() {
         return email;
     }
 
-    // Sets the email supplied for the partial update.
+    // Sets the email for the partial update.
     public void setEmail(String email) {
         this.email = email;
     }
 
-    // Returns the phone number supplied for the partial update.
+    // Returns the supplied phone number.
     public String getPhone() {
         return phone;
     }
 
-    // Sets the phone number supplied for the partial update.
+    // Sets the phone number for the partial update.
     public void setPhone(String phone) {
         this.phone = phone;
     }
