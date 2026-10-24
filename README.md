@@ -1,6 +1,8 @@
 # RideShare Backend
 
-A ride-sharing backend built with **Java 21, Spring Boot, Spring Data JPA, PostgreSQL, and REST APIs**. This project follows a layered monolithic architecture and implements user management, driver and vehicle management, ride assignment, and ride lifecycle operations.
+A ride-sharing backend built with **Java 21, Spring Boot, Spring Data JPA, PostgreSQL, and REST APIs**. The project follows a layered monolithic architecture and implements user management, driver and vehicle management, ride lifecycle operations, and a dedicated ride-offer workflow.
+
+The goal is to build a practical backend engineering project demonstrating REST API design, relational database modeling, validation, transaction management, business-rule enforcement, and Git-based development.
 
 ## Tech Stack
 
@@ -19,64 +21,86 @@ A ride-sharing backend built with **Java 21, Spring Boot, Spring Data JPA, Postg
 
 ### 1. User Management
 
-- User CRUD APIs
-- Full updates using PUT and partial updates using PATCH
-- DTO-based request and response handling
-- Layered architecture: Controller → Service → Repository
-- PostgreSQL persistence using Spring Data JPA
-- Application-level and database-level email uniqueness
-- User roles: `RIDER` and `DRIVER`
-- Search users by name and email
-- Pagination and sorting
-- Request validation for names, emails, and phone numbers
-- Structured exception handling for missing users and duplicate email addresses
+- User CRUD APIs.
+- Full updates using PUT and partial updates using PATCH.
+- DTO-based request and response handling.
+- Layered architecture: Controller → Service → Repository.
+- PostgreSQL persistence using Spring Data JPA.
+- Application-level and database-level email uniqueness.
+- User roles: `RIDER` and `DRIVER`.
+- Search users by name and email.
+- Pagination and sorting.
+- Validation for names, emails, and phone numbers.
+- Structured exception handling for missing users and duplicate email addresses.
+- Automatic `RIDER` role assignment during ordinary user creation.
 
 ### 2. Driver Management
 
-- Driver registration linked to a user and vehicle
-- Driver license information
-- Driver availability states: `AVAILABLE`, `BUSY`, and `OFFLINE`
-- Driver lookup and validation during ride acceptance
-- Custom exceptions for missing drivers and invalid driver states
-- One-to-one relationships and database uniqueness constraints
-- Driver availability updates during ride acceptance, cancellation, and completion
+- Driver registration linked to a user and vehicle.
+- Driver license information.
+- Driver availability states: `AVAILABLE`, `BUSY`, and `OFFLINE`.
+- Driver lookup and validation during ride acceptance.
+- Custom exceptions for missing drivers and invalid driver states.
+- One-to-one relationships and database uniqueness constraints.
+- Automatic assignment of the `DRIVER` role during driver creation.
+- Driver availability updates during ride acceptance, cancellation, and completion.
 
 ### 3. Vehicle Management
 
-- Vehicle entity with a unique registration number
-- Vehicle type classification: `HATCHBACK`, `SEDAN`, `SUV`, and `MUV`
-- Driver-to-vehicle relationship
-- Database-level foreign key and uniqueness constraints
+- Vehicle entity with a unique registration number.
+- Vehicle type classification: `HATCHBACK`, `SEDAN`, `SUV`, and `MUV`.
+- Driver-to-vehicle relationship.
+- Database-level foreign key and uniqueness constraints.
 
 ### 4. Ride Management
 
-- Create and retrieve ride requests
-- Retrieve rides by ID, rider ID, and driver ID
-- Filter rides by status
-- Ride lifecycle represented by a `RideStatus` enum
-- Automatic ride request timestamp
-- Driver acceptance and rejection of ride requests
-- Driver assignment during ride acceptance
-- Start accepted rides
-- Complete rides that are in progress
-- Cancel rides when their current status permits cancellation
-- Restore driver availability when an accepted ride is cancelled or a ride is completed
-- Validate ride status transitions and driver availability
-- Transaction-managed ride and driver state changes
-- DTO-based ride responses
+- Create and retrieve ride requests.
+- Retrieve rides by ID, rider ID, and driver ID.
+- Filter rides by status.
+- Ride lifecycle represented by a `RideStatus` enum.
+- Automatic ride request timestamp.
+- Driver acceptance and rejection of ride requests.
+- Driver assignment during ride acceptance.
+- Start accepted rides.
+- Complete rides that are in progress.
+- Cancel eligible rides.
+- Restore driver availability when an accepted ride is cancelled or a ride is completed.
+- Validate ride status transitions and driver availability.
+- Transaction-managed ride and driver state changes.
+- DTO-based ride responses.
 
-### 5. Validation and Error Handling
+### 5. Ride Offer Management
 
-- Jakarta Bean Validation
-- Required-field, email-format, and phone-number validation
-- Custom validation messages
-- Global exception handling
-- Structured API error responses containing status, message, path, and timestamp
-- Multiple field-level validation errors
-- HTTP `400 Bad Request`, `404 Not Found`, and `409 Conflict` handling
-- Database constraint violation handling
-- Custom exceptions for missing rides, drivers, and users
-- Business-rule validation for ride acceptance, rejection, cancellation, starting, and completion
+A dedicated offer workflow allows a driver to receive an offer for a requested ride and accept or reject it.
+
+- Create a ride offer for a specific driver.
+- Accept a pending offer and assign the driver to the ride.
+- Reject an offer without rejecting the entire ride request.
+- Track offer states using `RideOfferStatus`.
+- Prevent duplicate offers for the same ride-driver pair through a database uniqueness constraint and application-level validation.
+- Validate ride status, driver availability, and offer status before accepting an offer.
+- Use transaction management and ride locking to help protect against conflicting state changes.
+- Expire other pending offers when one driver accepts the ride.
+
+Offer statuses:
+
+- `PENDING`
+- `ACCEPTED`
+- `REJECTED`
+- `EXPIRED`
+
+### 6. Validation and Error Handling
+
+- Jakarta Bean Validation.
+- Required-field, email-format, and phone-number validation.
+- Custom validation messages.
+- Global exception handling.
+- Structured API error responses containing status, message, path, and timestamp.
+- Multiple field-level validation errors.
+- HTTP `400 Bad Request`, `404 Not Found`, and `409 Conflict` handling.
+- Database constraint violation handling.
+- Custom exceptions for missing rides, drivers, and users.
+- Business-rule validation for ride and offer lifecycle transitions.
 
 ## API Documentation
 
@@ -113,12 +137,20 @@ Base URL for local development:
 | GET | `/api/rides/driver/{driverId}` | Retrieve rides assigned to a driver |
 | GET | `/api/rides/status/{status}` | Filter rides by status |
 | PATCH | `/api/rides/{id}/cancel` | Cancel an eligible ride |
-| PATCH | `/api/rides/{rideId}/accept/{driverId}` | Accept a requested ride |
-| PATCH | `/api/rides/{rideId}/reject/{driverId}` | Reject a requested ride |
+| PATCH | `/api/rides/{rideId}/accept/{driverId}` | Accept a requested ride through the existing ride endpoint |
+| PATCH | `/api/rides/{rideId}/reject/{driverId}` | Reject a requested ride through the existing ride endpoint |
 | PATCH | `/api/rides/{rideId}/start` | Start an accepted ride |
 | PATCH | `/api/rides/{rideId}/complete` | Complete a ride in progress |
 
-Use IDs that exist in your database when testing. Example IDs in this README are illustrative and may not match your current database state.
+### Ride Offer APIs
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST | `/api/rides/{rideId}/offers/{driverId}` | Create a ride offer |
+| PATCH | `/api/rides/{rideId}/offers/{driverId}/accept` | Accept a pending offer |
+| PATCH | `/api/rides/{rideId}/offers/{driverId}/reject` | Reject a pending offer |
+
+Use IDs that exist in your database when testing. Example IDs are illustrative and may not match your current database state.
 
 ## Ride Lifecycle
 
@@ -135,31 +167,65 @@ The `RideStatus` enum contains:
 
 A rider creates a ride request with pickup and drop-off locations. A new ride begins with `REQUESTED` status and receives its request timestamp automatically.
 
-### 2. Driver Acceptance
+### 2. Ride Offer Creation
 
 Endpoint:
 
-`PATCH /api/rides/{rideId}/accept/{driverId}`
+`POST /api/rides/{rideId}/offers/{driverId}`
 
-Business rules:
+The application checks that:
 
-1. The ride must exist and have `REQUESTED` status.
-2. The driver must exist and have `AVAILABLE` status.
-3. The driver is assigned to the ride.
-4. The ride status changes to `ACCEPTED`.
-5. The driver's status changes to `BUSY`.
+1. The ride exists.
+2. The ride is `REQUESTED` and has no assigned driver.
+3. The driver exists and is `AVAILABLE`.
+4. An offer for the same ride-driver pair does not already exist.
 
-If the ride is in an invalid state or the driver is unavailable, the API rejects the operation with an appropriate error response.
+A successful request creates an offer with `PENDING` status.
 
-### 3. Driver Rejection
+### 3. Accept a Ride Offer
 
 Endpoint:
 
-`PATCH /api/rides/{rideId}/reject/{driverId}`
+`PATCH /api/rides/{rideId}/offers/{driverId}/accept`
 
-A requested ride can be rejected by the specified driver. The ride status changes to `REJECTED`. Rejected rides cannot subsequently be accepted through the normal acceptance flow.
+When a driver accepts a pending offer:
 
-### 4. Start a Ride
+1. The ride is checked and locked for the operation.
+2. The offer must be `PENDING`.
+3. The ride must still be `REQUESTED` and unassigned.
+4. The driver must still be `AVAILABLE`.
+5. The offer changes to `ACCEPTED`.
+6. The driver is assigned to the ride.
+7. The ride changes to `ACCEPTED`.
+8. The driver changes to `BUSY`.
+9. Other pending offers for that ride are marked `EXPIRED`.
+
+The related state changes are managed within a transaction. Invalid repeated acceptance attempts are rejected.
+
+### 4. Reject a Ride Offer
+
+Endpoint:
+
+`PATCH /api/rides/{rideId}/offers/{driverId}/reject`
+
+Rejecting a pending offer:
+
+- Changes the offer status to `REJECTED`.
+- Leaves the ride in `REQUESTED` status if it has not been assigned.
+- Leaves the driver `AVAILABLE`, provided the driver has no other active assignment requiring a busy state.
+
+Rejecting an offer is distinct from rejecting the entire ride request.
+
+### 5. Existing Ride Acceptance and Rejection Endpoints
+
+The original ride endpoints are:
+
+- `PATCH /api/rides/{rideId}/accept/{driverId}`
+- `PATCH /api/rides/{rideId}/reject/{driverId}`
+
+These endpoints predate the dedicated offer workflow. Integrating them with the offer-management service is a planned improvement so all acceptance and rejection paths follow the same business rules and maintain consistent offer records.
+
+### 6. Start a Ride
 
 Endpoint:
 
@@ -169,7 +235,7 @@ Only a ride in `ACCEPTED` status can be started.
 
 On success, the ride status changes to `IN_PROGRESS`. The assigned driver remains `BUSY` while the journey is underway.
 
-### 5. Complete a Ride
+### 7. Complete a Ride
 
 Endpoint:
 
@@ -185,7 +251,7 @@ On success:
 
 The ride and driver updates are managed within a transaction to help preserve database consistency.
 
-### 6. Cancel a Ride
+### 8. Cancel a Ride
 
 Endpoint:
 
@@ -197,9 +263,40 @@ Cancellation is permitted for rides in `REQUESTED` or `ACCEPTED` status.
 - If a driver was assigned, that driver's status changes back to `AVAILABLE`.
 - Attempts to cancel rides in other states are rejected.
 
+The offer-management workflow should also be integrated with cancellation so pending offers are handled consistently.
+
+## Database Design and Integrity
+
+The project uses PostgreSQL with Spring Data JPA and Hibernate.
+
+### Driver Constraints
+
+Driver records use database constraints to protect required fields and prevent duplicate relationships:
+
+- `user_id`: `NOT NULL` and `UNIQUE`.
+- `vehicle_id`: `NOT NULL` and `UNIQUE`.
+- `license_number`: `NOT NULL` and `UNIQUE`.
+- `status`: `NOT NULL`.
+
+### Ride Indexes
+
+Indexes have been created for frequently queried ride columns:
+
+- `rider_id` — supports rider-specific ride retrieval.
+- `driver_id` — supports driver-specific ride retrieval.
+- `status` — supports status-based filtering.
+
+### Ride Offer Constraints
+
+The `ride_offers` table includes a uniqueness constraint on `(ride_id, driver_id)` to prevent duplicate offers for the same pair.
+
+PostgreSQL uses B-tree indexes by default for ordinary indexes unless another index type is specified. Indexes can improve lookups but add storage and write overhead.
+
+Entity annotations describe the intended database mapping, but schema changes should be verified against the actual database. Versioned migrations with Flyway are a planned improvement.
+
 ## Verified Business Rules and Testing
 
-The following scenarios have been verified through Postman during development:
+The following scenarios have been manually tested through Postman during development.
 
 | Scenario | Expected result | Verification |
 |---|---|---|
@@ -208,21 +305,27 @@ The following scenarios have been verified through Postman during development:
 | Submit invalid user data | `400 Bad Request` | Passed |
 | Retrieve a nonexistent user | `404 Not Found` | Passed |
 | Cancel an eligible ride | Successful cancellation | Passed |
-| Reject a requested ride | Ride becomes `REJECTED` | Passed |
+| Reject a requested ride through the original endpoint | Ride becomes `REJECTED` | Passed |
 | Accept a requested ride with an available driver | Ride becomes `ACCEPTED`; driver becomes `BUSY` | Passed |
 | Accept a cancelled ride | `409 Conflict` | Passed |
 | Accept another ride with a busy driver | `409 Conflict`; new ride remains unassigned | Passed |
-| Start an accepted ride | `200 OK`; ride becomes `IN_PROGRESS` | Passed |
+| Start an accepted ride | Ride becomes `IN_PROGRESS` | Passed |
 | Start an already-started ride | `409 Conflict` | Passed |
 | Start a nonexistent ride | `404 Not Found` | Passed |
-| Complete an in-progress ride | `200 OK`; ride becomes `COMPLETED` | Passed |
+| Complete an in-progress ride | Ride becomes `COMPLETED` | Passed |
 | Complete an already-completed ride | `409 Conflict` | Passed |
 | Complete a nonexistent ride | `404 Not Found` | Passed |
 | Verify driver availability after completion | Driver becomes `AVAILABLE` | Passed |
+| Create a ride offer | Offer becomes `PENDING` | Passed |
+| Accept a pending offer | Offer becomes `ACCEPTED` | Passed |
+| Verify accepted offer assignment | Ride assigned; ride and driver states updated | Passed |
+| Accept the same offer again | Request rejected | Passed |
+| Reject a pending offer | Offer becomes `REJECTED`; ride remains `REQUESTED` | Passed |
+| Create a duplicate ride-driver offer | Duplicate rejected | Passed |
+| Verify database state after offer testing | Ride and driver states consistent | Passed |
+| Compile the latest service implementations | Maven build successful | Passed |
 
-Compilation has also passed for the latest service implementations.
-
-These checks are manual Postman tests. Automated unit and integration test coverage remains future work.
+These checks are manual Postman tests, not automated integration tests. Automated unit and integration test coverage remains future work.
 
 ## Architecture
 
@@ -247,7 +350,7 @@ Client / Postman
 ### Layer Responsibilities
 
 - **Controller:** Handles HTTP requests, path variables, request data, and response status codes.
-- **Service:** Implements business rules, validates ride transitions, coordinates operations, and manages transactions.
+- **Service:** Implements business rules, validates state transitions, coordinates operations, and manages transactions.
 - **Repository:** Provides database access through Spring Data JPA.
 - **Entity:** Represents persistent domain objects.
 - **DTO:** Controls the data exposed through API requests and responses.
@@ -268,81 +371,90 @@ User
 
 Ride
  ├── Rider (User)
- └── Driver (optional)
+ ├── Driver (optional)
+ └── RideOffer (one or more offers over time)
+       ├── Driver
+       └── Offer Status
 ```
 
 - `User` represents a person using the platform.
 - `Driver` contains driver-specific details, including license information and availability.
 - `Vehicle` stores vehicle details and is associated with a driver.
 - `Ride` represents a booking request associated with a rider and, optionally, an assigned driver.
+- `RideOffer` represents an offer sent to a driver for a particular ride.
 
 The project is currently a **monolithic application, not a microservices architecture**. Microservices, API Gateway, and service discovery are future architectural considerations rather than existing features.
 
 ## Project Status
 
-**Status: Under active development — core ride lifecycle implemented.**
+**Status: Under active development — core ride lifecycle and ride-offer management implemented.**
 
 ### Implemented
 
-- User CRUD, search, pagination, and sorting
-- DTO-based request and response handling
-- Validation and global exception handling
-- Application-level and database-level email uniqueness
-- User, driver, vehicle, and ride domain models
-- PostgreSQL persistence and entity relationships
-- Driver registration
-- Ride creation and retrieval
-- Ride filtering by rider, driver, and status
-- Ride acceptance and rejection
-- Ride cancellation with driver availability restoration
-- Ride start and completion
-- Driver assignment and availability updates throughout the ride lifecycle
-- Custom exceptions and HTTP error responses
-- Transaction-managed business operations
-- Manual Postman verification of core ride workflows
+- User CRUD, search, pagination, and sorting.
+- DTO-based request and response handling.
+- Validation and global exception handling.
+- Application-level and database-level email uniqueness.
+- User, driver, vehicle, ride, and ride-offer domain models.
+- PostgreSQL persistence and entity relationships.
+- Driver registration and user-role assignment.
+- Ride creation and retrieval.
+- Ride filtering by rider, driver, and status.
+- Ride acceptance and rejection through the original endpoints.
+- Dedicated ride-offer creation, acceptance, and rejection.
+- Duplicate ride-offer protection.
+- Ride cancellation, start, and completion.
+- Driver assignment and availability updates throughout the ride lifecycle.
+- Transaction-managed business operations and ride locking in the offer workflow.
+- Database constraints and indexes.
+- Manual Postman verification of core ride and offer workflows.
+- Git-based incremental development and GitHub commits.
 
 ### Planned Improvements
 
-#### Backend Quality and Testing
+#### 1. Backend Quality and Testing
 
-- Unit tests for services and controllers
-- Integration tests with PostgreSQL and Testcontainers
-- Automated testing of ride lifecycle transitions
-- Concurrency control for simultaneous driver acceptance
-- Database indexing and query optimization
-- Review and strengthen entity constraints and transaction boundaries
-- Swagger / OpenAPI documentation
+- Integrate the original ride acceptance and rejection endpoints with ride offers.
+- Handle pending offers consistently when rides are cancelled.
+- Add unit tests for services and controllers.
+- Add integration tests with PostgreSQL and Testcontainers.
+- Automate ride and offer lifecycle tests.
+- Test simultaneous offer acceptance and duplicate creation under concurrency.
+- Review transaction boundaries and driver availability consistency.
+- Add Flyway database migrations.
+- Add Swagger / OpenAPI documentation.
 
-#### Security and Authentication
+#### 2. Security and Authentication
 
-- Spring Security
-- JWT-based authentication
-- Role-based authorization for riders and drivers
-- Authorization checks to ensure users can perform only permitted ride operations
+- Spring Security.
+- JWT-based authentication.
+- Role-based authorization for riders and drivers.
+- Authorization checks so users can perform only permitted ride operations.
 
-#### Additional Features
+#### 3. Additional Features
 
-- Fare calculation
-- Ride history and richer filtering
-- Driver retrieval, update, and availability management endpoints
-- Improved API documentation and error consistency
+- Fare calculation.
+- Ride history and richer filtering.
+- Driver retrieval, update, and availability management endpoints.
+- Improved API documentation and error consistency.
+- More complete offer expiration and lifecycle handling.
 
-#### Performance and Deployment
+#### 4. Performance and Deployment
 
-- Redis caching where justified
-- Docker containerization
-- CI/CD pipeline
-- Cloud deployment
-- Centralized logging and monitoring
-- API Gateway and service discovery if the system evolves toward microservices
+- Redis caching where justified.
+- Docker containerization.
+- CI/CD pipeline.
+- Cloud deployment.
+- Centralized logging and monitoring.
+- API Gateway and service discovery if the system evolves toward microservices.
 
 ## Running Locally
 
 ### Prerequisites
 
-- Java 21 or a compatible configured JDK
-- Maven
-- PostgreSQL
+- Java 21 or a compatible configured JDK.
+- Maven.
+- PostgreSQL.
 
 ### 1. Clone the Repository
 
@@ -378,26 +490,30 @@ GET   /api/rides/4
 GET   /api/rides/rider/8
 GET   /api/rides/driver/1
 GET   /api/rides/status/REQUESTED
-PATCH /api/rides/4/accept/1
 PATCH /api/rides/4/start
 PATCH /api/rides/4/complete
+POST  /api/rides/6/offers/3
+PATCH /api/rides/6/offers/3/accept
+PATCH /api/rides/6/offers/3/reject
 ```
 
-These examples illustrate the endpoint formats. Each operation must be tested against the actual state of the database; for example, a ride must be accepted before it can be started.
+These examples illustrate endpoint formats. Use IDs and states that exist in your own database. An offer must be pending to be accepted or rejected, and a ride must be accepted before it can be started.
 
 ## Learning Objectives
 
 This project is designed to strengthen practical backend engineering skills, including:
 
-- Java and object-oriented programming
-- Spring Boot REST API development
-- Layered architecture and separation of concerns
-- Spring Data JPA and Hibernate
-- PostgreSQL relationships, constraints, and indexing
-- DTOs, validation, and exception handling
-- Transaction management and JPA dirty checking
-- State machines and business-rule validation
-- Ride assignment and driver availability management
-- API testing, debugging, and error handling
-- Git-based incremental development
-- Automated testing, concurrency, and backend system design fundamentals
+- Java and object-oriented programming.
+- Spring Boot REST API development.
+- Layered architecture and separation of concerns.
+- Spring Data JPA and Hibernate.
+- PostgreSQL relationships, constraints, and indexing.
+- DTOs, validation, and exception handling.
+- Transaction management and JPA dirty checking.
+- State machines and business-rule validation.
+- Ride assignment and driver availability management.
+- Ride-offer lifecycle modeling.
+- Database locking and concurrency fundamentals.
+- API testing, debugging, and error handling.
+- Git-based incremental development.
+- Automated testing and backend system design fundamentals.
