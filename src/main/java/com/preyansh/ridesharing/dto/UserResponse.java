@@ -1,5 +1,7 @@
 package com.preyansh.ridesharing.dto;
 
+import com.preyansh.ridesharing.model.Role;
+
 // DTO (Data Transfer Object) used to send user information
 // from the application to the client in API responses.
 public class UserResponse {
@@ -15,6 +17,9 @@ public class UserResponse {
 
     // Phone number of the user.
     private String phone;
+
+    // Role assigned to the user, such as RIDER or DRIVER.
+    private Role role;
 
     // No-argument constructor, useful for creating an empty response object.
     public UserResponse() {
@@ -59,5 +64,15 @@ public class UserResponse {
     // Sets the user's phone number.
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    // Returns the user's role.
+    public Role getRole() {
+        return role;
+    }
+
+    // Sets the user's role.
+    public void setRole(Role role) {
+        this.role = role;
     }
 }

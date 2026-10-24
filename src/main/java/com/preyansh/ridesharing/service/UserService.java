@@ -5,6 +5,7 @@ import com.preyansh.ridesharing.dto.UserRequest;
 import com.preyansh.ridesharing.dto.UserResponse;
 import com.preyansh.ridesharing.exception.UserAlreadyExistsException;
 import com.preyansh.ridesharing.exception.UserNotFoundException;
+import com.preyansh.ridesharing.model.Role;
 import com.preyansh.ridesharing.model.User;
 import com.preyansh.ridesharing.repository.UserRepository;
 
@@ -56,6 +57,7 @@ public class UserService {
         user.setName(userRequest.getName());
         user.setEmail(email);
         user.setPhone(userRequest.getPhone());
+        user.setRole(Role.RIDER);
         // Saves the new user and returns its response DTO.
         User savedUser = userRepository.save(user);
         return toResponse(savedUser);
@@ -148,6 +150,7 @@ public class UserService {
         response.setName(user.getName());
         response.setEmail(user.getEmail());
         response.setPhone(user.getPhone());
+        response.setRole(user.getRole());
         return response;
     }
 
