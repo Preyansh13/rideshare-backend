@@ -1,6 +1,6 @@
 # RideShare Backend
 
-A ride-sharing backend built with **Java 21, Spring Boot, Spring Data JPA, PostgreSQL, and REST APIs**. The project follows a layered monolithic architecture and implements user management, driver and vehicle management, ride lifecycle operations, and a dedicated ride-offer workflow.
+A ride-sharing backend built with **Java 21, Spring Boot, Spring Data JPA, PostgreSQL, and REST APIs**. The project follows a layered monolithic architecture and implements user management, driver management and vehicle management, ride lifecycle operations, and a dedicated ride-offer workflow.
 
 The goal is to build a practical backend engineering project demonstrating REST API design, relational database modeling, validation, transaction management, business-rule enforcement, and Git-based development.
 
