@@ -171,6 +171,21 @@ public class RideOfferService {
         return toResponse(offer);
     }
 
+    // Expire all pending offers for a ride that is being cancelled.
+    @Transactional
+    public void expirePendingOffers(Long rideId) {
+        // Find all offers that are still pending for this ride.
+        List<RideOffer> pendingOffers =
+                rideOfferRepository.findByRide_IdAndStatus(
+                        rideId, RideOfferStatus.PENDING);
+        // Mark each pending offer as expired.
+        for (RideOffer offer : pendingOffers) {
+            offer.setStatus(RideOfferStatus.EXPIRED);
+        }
+        // Persist the updated offer statuses.
+        rideOfferRepository.saveAll(pendingOffers);
+    }
+
     // Convert the entity into a response DTO.
     private RideOfferResponse toResponse(RideOffer offer) {
         return new RideOfferResponse(

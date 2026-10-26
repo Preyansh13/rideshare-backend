@@ -163,43 +163,39 @@ public class RideService {
     }
 
     // Cancels a ride if its current status allows cancellation.
-    // @Transactional ensures database changes are handled within one transaction.
     @Transactional
     public RideResponse cancelRide(Long id) {
-        // Finds the ride by its ID.
-        Optional<Ride> existingRide = rideRepository.findById(id);
-        // Throws an exception if the requested ride does not exist.
-        if (existingRide.isEmpty()) {
-            throw new RideNotFoundException("Ride with id " + id + " not found");
+        // Find the ride by its ID.
+        Ride ride = rideRepository.findByIdForUpdate(id)
+                .orElseThrow(() ->
+                        new RideNotFoundException(
+                                "Ride with id " + id + " not found"));
+        // Allow cancellation only for REQUESTED or ACCEPTED rides.
+        if (ride.getStatus() != RideStatus.REQUESTED
+                && ride.getStatus() != RideStatus.ACCEPTED) {
+            throw new InvalidRideStatusException(
+                    "Ride cannot be cancelled in its current state");
         }
-        // Retrieves the ride entity from the Optional.
-        Ride ride = existingRide.get();
-        // Allows cancellation only when the ride is REQUESTED or ACCEPTED.
-        if (ride.getStatus() == RideStatus.REQUESTED || ride.getStatus() == RideStatus.ACCEPTED) {
-            // If the ride was accepted, restore the assigned driver's availability.
-            if (ride.getStatus() == RideStatus.ACCEPTED && ride.getDriver() != null) {
-                // Retrieves the driver assigned to this ride.
-                Driver driver = ride.getDriver();
-                // Makes the driver available for another ride.
-                driver.setStatus(DriverStatus.AVAILABLE);
-                // Saves the updated driver status in the database.
-                driverRepository.save(driver);
-            }
-            // Updates the ride status to CANCELLED.
-            ride.setStatus(RideStatus.CANCELLED);
+        // If the ride was accepted, make its assigned driver available.
+        if (ride.getStatus() == RideStatus.ACCEPTED
+                && ride.getDriver() != null) {
+            Driver driver = ride.getDriver();
+            driver.setStatus(DriverStatus.AVAILABLE);
+            driverRepository.save(driver);
         }
-        else {
-            // Rejects cancellation when the ride is in an unsupported state.
-            throw new InvalidRideStatusException("Ride cannot be cancelled in its current state");
-        }
-        // Saves the updated ride to the database.
+        // Mark the ride as cancelled.
+        ride.setStatus(RideStatus.CANCELLED);
+        // Expire all offers that are still pending for this ride.
+        rideOfferService.expirePendingOffers(id);
+        // Save the cancelled ride.
         Ride savedRide = rideRepository.save(ride);
-        // Converts the saved ride entity into a RideResponse DTO.
-        // Returns the driver's ID when assigned, or null when no driver is assigned.
+        // Return the updated ride as a response DTO.
         return new RideResponse(
                 savedRide.getId(),
                 savedRide.getRider().getId(),
-                savedRide.getDriver() == null ? null : savedRide.getDriver().getId(),
+                savedRide.getDriver() == null
+                        ? null
+                        : savedRide.getDriver().getId(),
                 savedRide.getPickupLocation(),
                 savedRide.getDropoffLocation(),
                 savedRide.getStatus(),
