@@ -5,12 +5,7 @@ import com.preyansh.ridesharing.exception.DriverNotFoundException;
 import com.preyansh.ridesharing.exception.InvalidDriverStatusException;
 import com.preyansh.ridesharing.exception.InvalidRideStatusException;
 import com.preyansh.ridesharing.exception.RideNotFoundException;
-import com.preyansh.ridesharing.model.Driver;
-import com.preyansh.ridesharing.model.DriverStatus;
-import com.preyansh.ridesharing.model.Ride;
-import com.preyansh.ridesharing.model.RideOffer;
-import com.preyansh.ridesharing.model.RideOfferStatus;
-import com.preyansh.ridesharing.model.RideStatus;
+import com.preyansh.ridesharing.model.*;
 import com.preyansh.ridesharing.repository.DriverRepository;
 import com.preyansh.ridesharing.repository.RideOfferRepository;
 import com.preyansh.ridesharing.repository.RideRepository;
@@ -58,6 +53,12 @@ public class RideOfferService {
             throw new InvalidDriverStatusException(
                     "An offer can only be created for an available driver");
         }
+        // Verify the user has Driver role or not
+        if (driver.getUser().getRole() != Role.DRIVER) {
+            throw new InvalidDriverStatusException(
+                    "Only users with the DRIVER role can receive ride offers"
+            );
+        }
         // Do not create duplicate offers for the same ride-driver pair.
         if (rideOfferRepository.existsByRide_IdAndDriver_Id(rideId, driverId)) {
             throw new InvalidRideStatusException(
@@ -76,9 +77,11 @@ public class RideOfferService {
     // Reject an offer without rejecting the entire ride.
     @Transactional
     public RideOfferResponse rejectOffer(Long rideId, Long driverId) {
+        // Lock the ride to prevent conflicting lifecycle operations.
         Ride ride = rideRepository.findByIdForUpdate(rideId)
                 .orElseThrow(() ->
-                        new RideNotFoundException("Ride with id " + rideId + " not found"));
+                        new RideNotFoundException(
+                                "Ride with id " + rideId + " not found"));
         // A rejection is valid only while the ride is awaiting a driver.
         if (ride.getStatus() != RideStatus.REQUESTED || ride.getDriver() != null) {
             throw new InvalidRideStatusException(
@@ -95,8 +98,18 @@ public class RideOfferService {
             throw new InvalidRideStatusException(
                     "Only pending offers can be rejected");
         }
+        // Retrieve the driver and ensure the associated user has the DRIVER role.
+        Driver driver = driverRepository.findByIdForUpdate(driverId)
+                .orElseThrow(() ->
+                        new DriverNotFoundException(
+                                "Driver with id " + driverId + " not found"));
+        if (driver.getUser().getRole() != Role.DRIVER) {
+            throw new InvalidDriverStatusException(
+                    "Only users with the DRIVER role can reject ride offers");
+        }
         // Reject this offer only. The ride remains REQUESTED.
         offer.setStatus(RideOfferStatus.REJECTED);
+        // Save and return the updated offer.
         return toResponse(rideOfferRepository.save(offer));
     }
 
@@ -127,6 +140,12 @@ public class RideOfferService {
         if (driver.getStatus() != DriverStatus.AVAILABLE) {
             throw new InvalidDriverStatusException(
                     "Driver is no longer available");
+        }
+        // Verify the role of user is Driver or not
+        if (driver.getUser().getRole() != Role.DRIVER) {
+            throw new InvalidDriverStatusException(
+                    "Only users with the DRIVER role can accept rides"
+            );
         }
         // Accept the selected offer.
         offer.setStatus(RideOfferStatus.ACCEPTED);

@@ -21,12 +21,14 @@ public class RideService {
     private final RideRepository rideRepository;
     private final UserRepository userRepository;
     private final DriverRepository driverRepository;
+    private final RideOfferService rideOfferService;
 
     // Constructor injection supplies the repositories required by this service.
-    public RideService(RideRepository rideRepository, UserRepository userRepository, DriverRepository driverRepository) {
+    public RideService(RideRepository rideRepository, UserRepository userRepository, DriverRepository driverRepository, RideOfferService rideOfferService) {
         this.rideRepository = rideRepository;
         this.userRepository = userRepository;
         this.driverRepository = driverRepository;
+        this.rideOfferService = rideOfferService;
     }
 
     // Retrieves all rides and returns them as response DTOs.
@@ -209,91 +211,19 @@ public class RideService {
     // @Transactional ensures the database changes are committed together or rolled back if an unchecked exception occurs.
     @Transactional
     public RideResponse acceptRide(Long rideId, Long driverId) {
-        // Finds the ride by ID.
-        Optional<Ride> existingRide = rideRepository.findByIdForUpdate(rideId);
-        // Throws an exception if the requested ride does not exist.
-        if (existingRide.isEmpty()) {
-            throw new RideNotFoundException("Ride with id " + rideId + " not found");
-        }
-        // Retrieves the ride entity from the Optional.
-        Ride ride = existingRide.get();
-        // Only rides in the REQUESTED state can be accepted.
-        if (ride.getStatus() != RideStatus.REQUESTED) {
-            throw new InvalidRideStatusException("Ride cannot be accepted in its current state");
-        }
-        // Finds the driver by ID.
-        Optional<Driver> existingDriver = driverRepository.findByIdForUpdate(driverId);
-        // Throws an exception if the requested driver does not exist.
-        if (existingDriver.isEmpty()) {
-            throw new DriverNotFoundException("Driver with id " + driverId + " not found");
-        }
-        // Retrieves the driver entity from the Optional.
-        Driver driver = existingDriver.get();
-        // Ensures that only an AVAILABLE driver can accept a ride.
-        if (driver.getStatus() != DriverStatus.AVAILABLE) {
-            throw new InvalidDriverStatusException("Driver with id " + driverId + " is not available to accept a ride");
-        }
-        // Assigns the driver to the ride.
-        ride.setDriver(driver);
-        // Updates the ride status to ACCEPTED.
-        ride.setStatus(RideStatus.ACCEPTED);
-        // Marks the driver as BUSY because they have accepted a ride.
-        driver.setStatus(DriverStatus.BUSY);
-        // Saves the updated ride, including its assigned driver and status.
-        Ride savedRide = rideRepository.save(ride);
-        // Saves the driver's updated BUSY status.
-        driverRepository.save(driver);
-        // Converts the saved ride entity into a RideResponse DTO.
-        // Returns IDs and ride details instead of exposing the full entities.
-        return new RideResponse(
-                savedRide.getId(),
-                savedRide.getRider().getId(),
-                savedRide.getDriver().getId(),
-                savedRide.getPickupLocation(),
-                savedRide.getDropoffLocation(),
-                savedRide.getStatus(),
-                savedRide.getRequestedAt()
-        );
+        // Accept the driver's pending offer and update the ride, driver, and other pending offers through RideOfferService.
+        rideOfferService.acceptOffer(rideId, driverId);
+        // Return the updated ride using the existing response format.
+        return getRideById(rideId);
     }
 
     // Rejects a requested ride for a driver.
     @Transactional
     public RideResponse rejectRide(Long rideId, Long driverId) {
-        // Finds the ride using its ID.
-        Optional<Ride> existingRide = rideRepository.findById(rideId);
-        // Throws an exception if the ride does not exist.
-        if (existingRide.isEmpty()) {
-            throw new RideNotFoundException("Ride with id " + rideId + " not found");
-        }
-        // Retrieves the ride entity from the Optional.
-        Ride ride = existingRide.get();
-        // Only rides in the REQUESTED state can be rejected.
-        if (ride.getStatus() != RideStatus.REQUESTED) {
-            throw new InvalidRideStatusException("Ride cannot be rejected in its current state");
-        }
-        // Finds the driver using the driver's ID.
-        Optional<Driver> existingDriver = driverRepository.findById(driverId);
-        // Throws an exception if the driver does not exist.
-        if (existingDriver.isEmpty()) {
-            throw new DriverNotFoundException("Driver with id " + driverId + " not found");
-        }
-        // Changes the ride status to REJECTED.
-        // The driver remains AVAILABLE because rejecting a ride does not mean the driver has accepted or started it.
-        ride.setStatus(RideStatus.REJECTED);
-        // Saves the updated ride status in the database.
-        Ride savedRide = rideRepository.save(ride);
-        // Converts the saved Ride entity into a RideResponse DTO.
-        // This returns only the required ride details instead of the full entity.
-        return new RideResponse(
-                savedRide.getId(),
-                savedRide.getRider().getId(),
-                // Handles rides without an assigned driver.
-                savedRide.getDriver() == null ? null : savedRide.getDriver().getId(),
-                savedRide.getPickupLocation(),
-                savedRide.getDropoffLocation(),
-                savedRide.getStatus(),
-                savedRide.getRequestedAt()
-        );
+        // Reject only this driver's pending offer.
+        rideOfferService.rejectOffer(rideId, driverId);
+        // The ride remains REQUESTED, so return its current state.
+        return getRideById(rideId);
     }
 
     // Starts a ride that has already been accepted by a driver.
