@@ -3,6 +3,7 @@ package com.preyansh.ridesharing.controller;
 import com.preyansh.ridesharing.dto.RideResponse;
 import com.preyansh.ridesharing.model.RideStatus;
 import com.preyansh.ridesharing.service.RideService;
+import com.preyansh.ridesharing.exception.RideNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -47,5 +48,20 @@ class RideControllerTest {
                 .andExpect(status().isOk()) // HTTP status must be 200.
                 .andExpect(jsonPath("$.id").value(8)) // Verify ride ID.
                 .andExpect(jsonPath("$.pickupLocation").value("Baner, Pune")); // Verify pickup location.
+    }
+
+    @Test
+    void getRideByIdWhenRideDoesNotExistShouldReturn404() throws Exception {
+        // Arrange: Configure the mocked service to throw an exception
+        // when the controller requests ride 999.
+        when(rideService.getRideById(999L))
+                .thenThrow(new RideNotFoundException("Ride not found with id: 999"));
+
+        // Act: Simulate an HTTP GET request for the nonexistent ride.
+        mockMvc.perform(get("/api/rides/999"))
+                .andExpect(status().isNotFound()) // Assert: Verify that the exception handler returns HTTP 404.
+                .andExpect(jsonPath("$.status").value(404)) // Verify that the JSON error response contains status code 404.
+                .andExpect(jsonPath("$.message").value("Ride not found with id: 999")) // Verify that the response contains the expected error message.
+                .andExpect(jsonPath("$.path").value("/api/rides/999")); // Verify that the response identifies the endpoint that caused the error.
     }
 }
