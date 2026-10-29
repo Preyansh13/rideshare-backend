@@ -5,7 +5,6 @@ public enum Role {
 
     // Represents a user who books rides.
     RIDER,
-
     // Represents a user who provides rides as a driver.
     DRIVER
 }

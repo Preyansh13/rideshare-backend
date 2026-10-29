@@ -203,25 +203,6 @@ public class RideService {
         );
     }
 
-    // Accepts a requested ride for a driver who is currently available.
-    // @Transactional ensures the database changes are committed together or rolled back if an unchecked exception occurs.
-    @Transactional
-    public RideResponse acceptRide(Long rideId, Long driverId) {
-        // Accept the driver's pending offer and update the ride, driver, and other pending offers through RideOfferService.
-        rideOfferService.acceptOffer(rideId, driverId);
-        // Return the updated ride using the existing response format.
-        return getRideById(rideId);
-    }
-
-    // Rejects a requested ride for a driver.
-    @Transactional
-    public RideResponse rejectRide(Long rideId, Long driverId) {
-        // Reject only this driver's pending offer.
-        rideOfferService.rejectOffer(rideId, driverId);
-        // The ride remains REQUESTED, so return its current state.
-        return getRideById(rideId);
-    }
-
     // Starts a ride that has already been accepted by a driver.
     @Transactional
     public RideResponse startRide(Long rideId) {
