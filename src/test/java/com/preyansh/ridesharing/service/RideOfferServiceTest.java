@@ -1,6 +1,7 @@
 package com.preyansh.ridesharing.service;
 
 import com.preyansh.ridesharing.dto.*;
+import com.preyansh.ridesharing.exception.*;
 import com.preyansh.ridesharing.model.*;
 import com.preyansh.ridesharing.repository.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -96,5 +97,30 @@ class RideOfferServiceTest {
         assertEquals(RideOfferStatus.PENDING, response.status());
 
         verify(rideOfferRepository).save(any(RideOffer.class));
+    }
+
+    @Test
+    void createOffer_ShouldThrowException_WhenOfferAlreadyExists() {
+
+        // Arrange: Return an existing ride.
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(ride));
+
+        // Arrange: Return an available driver.
+        when(driverRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(driver));
+
+        // Simulate an offer already existing for this ride and driver.
+        when(rideOfferRepository.existsByRide_IdAndDriver_Id(1L, 1L))
+                .thenReturn(true);
+
+        // Act & Assert: The service should reject the duplicate offer.
+        assertThrows(
+                InvalidRideStatusException.class,
+                () -> rideOfferService.createOffer(1L, 1L)
+        );
+
+        // Verify that no new offer was saved.
+        verify(rideOfferRepository, never()).save(any(RideOffer.class));
     }
 }
