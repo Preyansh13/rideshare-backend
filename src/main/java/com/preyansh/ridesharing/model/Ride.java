@@ -62,6 +62,11 @@ public class Ride {
         return id;
     }
 
+    // Assigns the database-generated id
+    public void setId(Long id) {
+        this.id = id;
+    }
+
     // Returns the user who requested this ride.
     public User getRider() {
         return rider;
