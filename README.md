@@ -2,7 +2,7 @@
 
 A ride-sharing backend built with **Java 21, Spring Boot, Spring Data JPA, PostgreSQL, and REST APIs**. The project follows a layered monolithic architecture and implements user management, driver and vehicle management, ride lifecycle operations, and a dedicated ride-offer workflow.
 
-The goal is to build a practical backend engineering project demonstrating REST API design, relational database modeling, validation, transaction management, concurrency control, business-rule enforcement, and Git-based development.
+The goal is to build a practical backend engineering project demonstrating REST API design, relational database modeling, validation, transaction management, concurrency control, business-rule enforcement, automated testing, and Git-based development.
 
 ## Tech Stack
 
@@ -12,8 +12,9 @@ The goal is to build a practical backend engineering project demonstrating REST 
 - **Database:** PostgreSQL
 - **Build Tool:** Maven
 - **API Design:** REST APIs
+- **API Documentation:** Swagger / OpenAPI
 - **Validation:** Jakarta Bean Validation
-- **API Testing:** Postman
+- **Testing:** JUnit 5, Mockito, Postman
 - **Development Environment:** IntelliJ IDEA
 - **Version Control:** Git and GitHub
 
@@ -59,8 +60,7 @@ The goal is to build a practical backend engineering project demonstrating REST 
 - Filter rides by status.
 - Ride lifecycle represented by a `RideStatus` enum.
 - Automatic ride request timestamp.
-- Driver acceptance and rejection through the existing ride endpoints.
-- Driver assignment during ride acceptance.
+- Driver assignment through the ride-offer workflow.
 - Start accepted rides.
 - Complete rides that are in progress.
 - Cancel eligible rides.
@@ -85,7 +85,6 @@ A dedicated offer workflow allows drivers to receive offers for requested rides 
 - Expire other pending offers when a driver accepts a ride.
 - Expire pending offers when the associated ride is cancelled.
 - Keep rejected offers distinct from expired offers.
-- Integrate the existing ride acceptance and rejection endpoints with the ride-offer service.
 
 Offer statuses:
 
@@ -107,6 +106,12 @@ Offer statuses:
 - Custom exceptions for missing rides, drivers, and users.
 - Business-rule validation for ride and offer lifecycle transitions.
 - Rejection of invalid repeated state transitions, such as starting an already-started ride or accepting an offer that is no longer pending.
+
+### 7. API Documentation
+
+- Swagger / OpenAPI integration.
+- Interactive API documentation for exploring and testing endpoints.
+- API documentation generated from the application's REST API definitions.
 
 ## API Documentation
 
@@ -143,8 +148,6 @@ Base URL for local development:
 | GET | `/api/rides/driver/{driverId}` | Retrieve rides assigned to a driver |
 | GET | `/api/rides/status/{status}` | Filter rides by status |
 | PATCH | `/api/rides/{id}/cancel` | Cancel an eligible ride |
-| PATCH | `/api/rides/{rideId}/accept/{driverId}` | Accept a requested ride through the ride-offer service |
-| PATCH | `/api/rides/{rideId}/reject/{driverId}` | Reject a requested ride through the ride-offer service |
 | PATCH | `/api/rides/{rideId}/start` | Start an accepted ride |
 | PATCH | `/api/rides/{rideId}/complete` | Complete a ride in progress |
 
@@ -156,7 +159,7 @@ Base URL for local development:
 | PATCH | `/api/rides/{rideId}/offers/{driverId}/accept` | Accept a pending offer |
 | PATCH | `/api/rides/{rideId}/offers/{driverId}/reject` | Reject a pending offer |
 
-The API list reflects the implemented endpoints discussed during development. Swagger/OpenAPI documentation and a dedicated driver retrieval endpoint remain planned improvements.
+The dedicated ride-offer endpoints handle driver acceptance and rejection. The older direct ride acceptance and rejection routes are not listed as active endpoints.
 
 ## Ride Lifecycle
 
@@ -208,7 +211,7 @@ When a driver accepts a pending offer:
 9. The driver changes to `BUSY`.
 10. Other pending offers for that ride are marked `EXPIRED`.
 
-The related state changes are managed within a transaction. Ride locking helps serialize competing operations involving the same ride, although concurrency behavior should also be covered by automated tests.
+The related state changes are managed within a transaction. Ride locking helps serialize competing operations involving the same ride.
 
 ### 4. Reject a Ride Offer
 
@@ -223,18 +226,9 @@ Rejecting a pending offer:
 - Does not reject the entire ride request.
 - Does not independently change the driver's availability.
 
-The driver should remain `AVAILABLE` if no other active assignment requires a busy state.
+The driver remains `AVAILABLE` if no other active assignment requires a busy state.
 
-### 5. Existing Ride Acceptance and Rejection Endpoints
-
-The existing endpoints are:
-
-- `PATCH /api/rides/{rideId}/accept/{driverId}`
-- `PATCH /api/rides/{rideId}/reject/{driverId}`
-
-These endpoints delegate to the ride-offer service so that acceptance and rejection use the same business rules and offer records as the dedicated offer workflow.
-
-### 6. Start a Ride
+### 5. Start a Ride
 
 Endpoint:
 
@@ -249,7 +243,7 @@ On success:
 
 Invalid state transitions are rejected.
 
-### 7. Complete a Ride
+### 6. Complete a Ride
 
 Endpoint:
 
@@ -265,7 +259,7 @@ On success:
 
 The ride and driver updates are managed within a transaction.
 
-### 8. Cancel a Ride
+### 7. Cancel a Ride
 
 Endpoint:
 
@@ -316,43 +310,61 @@ Entity annotations describe the intended database mapping, but existing database
 
 The project has verified the relevant driver constraints and ride indexes against PostgreSQL. Versioned database migrations with Flyway remain a planned improvement.
 
-## Verified Business Rules and Testing
+## Automated Testing
 
-The following scenarios have been manually tested through Postman during development.
+The project uses **JUnit 5 and Mockito** for service and controller unit testing.
 
-| Scenario | Expected result | Verification |
-|---|---|---|
-| Create a valid user | `201 Created` | Passed |
-| Create a user with duplicate email | `409 Conflict` | Passed |
-| Submit invalid user data | `400 Bad Request` | Passed |
-| Retrieve a nonexistent user | `404 Not Found` | Passed |
-| Cancel an eligible ride | Ride becomes `CANCELLED` | Passed |
-| Cancel an accepted ride | Ride cancelled and assigned driver released | Passed |
-| Reject a requested ride through the original endpoint | Ride becomes `REJECTED` | Passed |
-| Accept a requested ride with an available driver | Ride becomes `ACCEPTED`; driver becomes `BUSY` | Passed |
-| Accept a cancelled ride | `409 Conflict` | Passed |
-| Accept another ride with a busy driver | `409 Conflict`; new ride remains unassigned | Passed |
-| Start an accepted ride | Ride becomes `IN_PROGRESS` | Passed |
-| Start an already-started ride | `409 Conflict` | Passed |
-| Start a nonexistent ride | `404 Not Found` | Passed |
-| Complete an in-progress ride | Ride becomes `COMPLETED` | Passed |
-| Complete an already-completed ride | `409 Conflict` | Passed |
-| Complete a nonexistent ride | `404 Not Found` | Passed |
-| Verify driver availability after completion | Driver becomes `AVAILABLE` | Passed |
-| Create a ride offer | Offer becomes `PENDING` | Passed |
-| Accept a pending offer | Offer becomes `ACCEPTED` | Passed |
-| Verify accepted offer assignment | Ride assigned; ride and driver states updated | Passed |
-| Accept the same offer again | Request rejected | Passed |
-| Reject a pending offer | Offer becomes `REJECTED`; ride remains `REQUESTED` | Passed |
-| Create a duplicate ride-driver offer | Duplicate rejected | Passed |
-| Verify database state after offer testing | Ride and driver states consistent | Passed |
-| Cancel a ride with pending offers | Ride becomes `CANCELLED`; pending offers become `EXPIRED` | Passed |
-| Verify cancellation driver cleanup | Assigned driver becomes `AVAILABLE` | Passed |
-| Verify driver constraints and ride indexes | Database schema checks passed | Passed |
-| Test concurrent ride assignment protection | Implementation added and compiled | Implemented; further automated testing planned |
-| Compile the latest service implementations | Maven build successful | Passed |
+Current test classes include:
 
-These checks are manual Postman tests unless otherwise specified. Automated unit and integration test coverage remains future work.
+- `RideControllerTest`
+- `RideServiceTest`
+- `RideOfferServiceTest`
+
+### Ride Controller Tests
+
+- Controller-level behavior and response handling.
+
+### Ride Service Tests
+
+- Ride cancellation.
+- Ride start and completion.
+- Valid and invalid lifecycle transitions.
+- Missing ride handling.
+- Driver availability behavior.
+
+### Ride Offer Service Tests
+
+Completed test scenarios include:
+
+- Creating a valid ride offer.
+- Preventing duplicate offers.
+- Rejecting offer creation when the driver is unavailable.
+- Successfully rejecting a pending offer.
+- Preventing rejection of an already-processed offer.
+- Handling a nonexistent offer.
+- Handling a nonexistent ride.
+
+Additional `acceptOffer()` unit tests and broader integration/concurrency tests are still in progress.
+
+### Running Tests
+
+Run the complete test suite:
+
+```bash
+mvn clean test
+```
+
+Run a specific test class:
+
+```bash
+mvn -Dtest=RideOfferServiceTest test
+```
+
+Run an individual test method:
+
+```bash
+mvn -Dtest=RideOfferServiceTest#rejectOffer_ShouldThrowException_WhenOfferIsAlreadyProcessed test
+```
 
 ## Architecture
 
@@ -414,7 +426,7 @@ The project is currently a **monolithic application, not a microservices archite
 
 ## Project Status
 
-**Status: Core ride lifecycle and ride-offer management implemented; backend quality and documentation improvements remain in progress.**
+**Status: Core ride lifecycle and ride-offer management implemented; automated testing and backend quality improvements are in progress.**
 
 ### Implemented
 
@@ -427,7 +439,6 @@ The project is currently a **monolithic application, not a microservices archite
 - Driver registration and user-role assignment.
 - Ride creation and retrieval.
 - Ride filtering by rider, driver, and status.
-- Ride acceptance and rejection through the existing endpoints.
 - Dedicated ride-offer creation, acceptance, and rejection.
 - Duplicate ride-offer protection.
 - Ride cancellation, start, and completion.
@@ -435,21 +446,26 @@ The project is currently a **monolithic application, not a microservices archite
 - Driver assignment and availability updates throughout the ride lifecycle.
 - Transaction-managed business operations and ride locking in the offer workflow.
 - Database constraints and indexes.
+- Swagger / OpenAPI integration.
 - Manual Postman verification of core ride and offer workflows.
-- Maven compilation checks.
+- JUnit 5 and Mockito test setup with controller and service tests.
 - Git-based incremental development and GitHub commits.
+
+### In Progress
+
+- Completing automated `RideOfferService` unit tests.
+- Adding automated tests for offer acceptance.
+- Expanding test coverage for edge cases and business-rule enforcement.
 
 ### Planned Improvements
 
 #### 1. Backend Quality and Testing
 
-- Add unit tests for services and controllers.
 - Add integration tests with PostgreSQL and Testcontainers.
-- Automate ride and offer lifecycle tests.
+- Automate end-to-end ride and offer lifecycle tests.
 - Test simultaneous offer acceptance and duplicate creation under concurrency.
 - Review transaction boundaries and driver availability consistency.
 - Add Flyway database migrations.
-- Add Swagger / OpenAPI documentation.
 - Review and strengthen API response consistency.
 
 #### 2. Security and Authentication
@@ -502,9 +518,15 @@ Use environment variables or an untracked configuration file for credentials. Ne
 mvn spring-boot:run
 ```
 
-### 4. Test the APIs
+### 4. Explore API Documentation
 
-Use Postman to send requests to the locally running application, typically at `http://localhost:8080`.
+Start the application and open the Swagger UI URL configured in the project. The commonly used Springdoc UI path is:
+
+`http://localhost:8080/swagger-ui/index.html`
+
+### 5. Test the APIs
+
+Use Postman or Swagger UI to send requests to the locally running application, typically at `http://localhost:8080`.
 
 Example requests:
 
@@ -542,6 +564,7 @@ This project is designed to strengthen practical backend engineering skills, inc
 - Ride assignment and driver availability management.
 - Ride-offer lifecycle modeling.
 - Database locking and concurrency fundamentals.
+- Unit testing with JUnit 5 and Mockito.
 - API testing, debugging, and error handling.
 - Git-based incremental development.
 - Automated testing and backend system design fundamentals.
