@@ -176,4 +176,29 @@ class RideOfferServiceTest {
         // Verify that the offer was saved in the repository.
         verify(rideOfferRepository).save(any(RideOffer.class));
     }
+
+    @Test
+    void rejectOffer_ShouldThrowException_WhenOfferIsAlreadyProcessed() {
+
+        // Arrange
+        // Return the ride when the service searches for it.
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(ride));
+        // Simulate an offer that has already been rejected.
+        // The service should only allow PENDING offers to be rejected.
+        rideOffer.setStatus(RideOfferStatus.REJECTED);
+        // Return the already-processed offer.
+        when(rideOfferRepository.findByRide_IdAndDriver_Id(1L, 1L))
+                .thenReturn(Optional.of(rideOffer));
+
+        // Act & Assert
+        // Expect InvalidRideStatusException because the offer is not PENDING.
+        assertThrows(
+                InvalidRideStatusException.class,
+                () -> rideOfferService.rejectOffer(1L, 1L)
+        );
+
+        // Verify that the offer was not saved because the operation failed.
+        verify(rideOfferRepository, never()).save(any(RideOffer.class));
+    }
 }
