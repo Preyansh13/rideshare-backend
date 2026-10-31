@@ -123,4 +123,27 @@ class RideOfferServiceTest {
         // Verify that no new offer was saved.
         verify(rideOfferRepository, never()).save(any(RideOffer.class));
     }
+
+    @Test
+    void createOffer_ShouldThrowException_WhenDriverIsUnavailable() {
+
+        // Arrange: Return an existing requested ride.
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(ride));
+
+        // Make the driver unavailable.
+        driver.setStatus(DriverStatus.BUSY);
+
+        when(driverRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(driver));
+
+        // Act & Assert: Creating an offer should fail.
+        assertThrows(
+                InvalidDriverStatusException.class,
+                () -> rideOfferService.createOffer(1L, 1L)
+        );
+
+        // Verify that no offer was saved.
+        verify(rideOfferRepository, never()).save(any(RideOffer.class));
+    }
 }
