@@ -201,4 +201,45 @@ class RideOfferServiceTest {
         // Verify that the offer was not saved because the operation failed.
         verify(rideOfferRepository, never()).save(any(RideOffer.class));
     }
+
+    @Test
+    void rejectOffer_ShouldThrowException_WhenOfferDoesNotExist() {
+
+        // Arrange
+        // Return the ride when the service searches for it.
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(ride));
+        // Simulate that no offer exists for this ride and driver.
+        when(rideOfferRepository.findByRide_IdAndDriver_Id(1L, 1L))
+                .thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(
+                InvalidRideStatusException.class,
+                () -> rideOfferService.rejectOffer(1L, 1L) // Expect an exception because the requested offer cannot be found.
+        );
+
+        // Verify that no offer was saved because the operation failed.
+        verify(rideOfferRepository, never()).save(any(RideOffer.class));
+    }
+
+    @Test
+    void rejectOffer_ShouldThrowException_WhenRideDoesNotExist() {
+        // Arrange: Simulate that the requested ride does not exist.
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.empty());
+
+        // Act & Assert: Expect RideNotFoundException when the ride is missing.
+        assertThrows(
+                RideNotFoundException.class,
+                () -> rideOfferService.rejectOffer(1L, 1L)
+        );
+
+        // Verify that the service never searches for an offer.
+        verify(rideOfferRepository, never())
+                .findByRide_IdAndDriver_Id(1L, 1L);
+
+        // Verify that no offer is saved.
+        verify(rideOfferRepository, never()).save(any(RideOffer.class));
+    }
 }
