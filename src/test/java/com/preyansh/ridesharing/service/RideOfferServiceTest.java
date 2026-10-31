@@ -146,4 +146,34 @@ class RideOfferServiceTest {
         // Verify that no offer was saved.
         verify(rideOfferRepository, never()).save(any(RideOffer.class));
     }
+
+    @Test
+    void rejectOffer_ShouldRejectOffer_WhenOfferIsPending() {
+
+        // ARRANGE
+        // Return the existing ride when the service searches for it.
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(ride));
+        // Return the pending offer associated with this ride and driver.
+        when(rideOfferRepository.findByRide_IdAndDriver_Id(1L, 1L))
+                .thenReturn(Optional.of(rideOffer));
+        // Return the available driver associated with the offer.
+        when(driverRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(driver));
+        // Simulate saving the offer by returning the same object passed to save().
+        when(rideOfferRepository.save(any(RideOffer.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        // ACT
+        // Execute the service method to reject the pending offer.
+        RideOfferResponse response = rideOfferService.rejectOffer(1L, 1L);
+
+        // ASSERT
+        assertEquals(RideOfferStatus.REJECTED, response.status()); // Verify that the returned response has REJECTED status.
+        assertEquals(RideStatus.REQUESTED, ride.getStatus()); // Verify that rejecting an offer does not change the ride's status.
+        assertEquals(DriverStatus.AVAILABLE, driver.getStatus()); // Verify that the driver remains available after rejecting the offer.
+
+        // Verify that the offer was saved in the repository.
+        verify(rideOfferRepository).save(any(RideOffer.class));
+    }
 }
