@@ -305,6 +305,190 @@ class RideOfferServiceTest {
         verify(rideOfferRepository).saveAll(List.of(rideOffer, anotherOffer));
     }
 
+    @Test
+    void acceptOffer_ShouldThrowException_WhenRideDoesNotExist() {
+        // Arrange: Simulate a ride that does not exist.
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.empty());
+
+        // Act & Assert: Expect RideNotFoundException.
+        assertThrows(RideNotFoundException.class,
+                () -> rideOfferService.acceptOffer(1L, 1L));
+
+        // Verify that processing stops after the ride lookup.
+        verify(rideRepository).findByIdForUpdate(1L);
+        verifyNoInteractions(rideOfferRepository, driverRepository);
+    }
+
+    @Test
+    void acceptOffer_ShouldThrowException_WhenRideIsNotRequested() {
+        // Arrange: Change the ride status to ACCEPTED.
+        ride.setStatus(RideStatus.ACCEPTED);
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(ride));
+
+        // Act & Assert: Expect InvalidRideStatusException.
+        assertThrows(InvalidRideStatusException.class,
+                () -> rideOfferService.acceptOffer(1L, 1L));
+
+        // Verify that offer and driver lookups never happen.
+        verify(rideOfferRepository, never())
+                .findByRide_IdAndDriver_Id(anyLong(), anyLong());
+        verifyNoInteractions(driverRepository);
+    }
+
+    @Test
+    void acceptOffer_ShouldThrowException_WhenDriverAlreadyAssigned() {
+        // Arrange: Create an available driver and assign them to the ride.
+        Driver assignedDriver = new Driver();
+        assignedDriver.setId(1L);
+        assignedDriver.setStatus(DriverStatus.AVAILABLE);
+
+        // Keep the ride REQUESTED but assign an existing driver.
+        ride.setStatus(RideStatus.REQUESTED);
+        ride.setDriver(assignedDriver);
+
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(ride));
+
+        // Act & Assert: Expect InvalidRideStatusException.
+        assertThrows(InvalidRideStatusException.class,
+                () -> rideOfferService.acceptOffer(1L, 1L));
+
+        // Verify that no offer or driver lookup happens.
+        verifyNoInteractions(rideOfferRepository, driverRepository);
+    }
+
+    @Test
+    void acceptOffer_ShouldThrowException_WhenOfferDoesNotExist() {
+        // Arrange: Ensure the ride is available for acceptance.
+        ride.setStatus(RideStatus.REQUESTED);
+        ride.setDriver(null);
+
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(ride));
+
+        // No offer exists for this ride and driver.
+        when(rideOfferRepository.findByRide_IdAndDriver_Id(1L, 1L))
+                .thenReturn(Optional.empty());
+
+        // Act & Assert: Expect InvalidRideStatusException.
+        assertThrows(InvalidRideStatusException.class,
+                () -> rideOfferService.acceptOffer(1L, 1L));
+
+        // Verify that driver lookup never happens.
+        verify(rideOfferRepository)
+                .findByRide_IdAndDriver_Id(1L, 1L);
+        verifyNoInteractions(driverRepository);
+    }
+
+    @Test
+    void acceptOffer_ShouldThrowException_WhenOfferIsAlreadyProcessed() {
+        // Arrange: Set ride status to REQUESTED.
+        ride.setStatus(RideStatus.REQUESTED);
+        ride.setDriver(null);
+        // Arrange: Set offer status to REJECTED.
+        rideOffer.setStatus(RideOfferStatus.REJECTED);
+
+        // Mock ride repository.
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(ride));
+        // Mock offer repository.
+        when(rideOfferRepository.findByRide_IdAndDriver_Id(1L, 1L))
+                .thenReturn(Optional.of(rideOffer));
+
+        // Act & Assert: Expect InvalidRideStatusException.
+        assertThrows(InvalidRideStatusException.class,
+                () -> rideOfferService.acceptOffer(1L, 1L));
+
+        // Verify driverRepository has no interactions.
+        verifyNoInteractions(driverRepository);
+    }
+
+    @Test
+    void acceptOffer_ShouldThrowException_WhenDriverDoesNotExist() {
+        // Arrange: Keep the ride available for acceptance.
+        ride.setStatus(RideStatus.REQUESTED);
+        ride.setDriver(null);
+        rideOffer.setStatus(RideOfferStatus.PENDING);
+
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(ride));
+        when(rideOfferRepository.findByRide_IdAndDriver_Id(1L, 1L))
+                .thenReturn(Optional.of(rideOffer));
+        // Simulate a driver that does not exist.
+        when(driverRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.empty());
+
+        // Act & Assert: Expect DriverNotFoundException.
+        assertThrows(DriverNotFoundException.class,
+                () -> rideOfferService.acceptOffer(1L, 1L));
+
+        // Verify no database save operations happen.
+        verify(rideOfferRepository, never()).save(any(RideOffer.class));
+        verify(rideOfferRepository, never()).saveAll(anyList());
+        verify(rideRepository, never()).save(any(Ride.class));
+        verify(driverRepository, never()).save(any(Driver.class));
+    }
+
+    @Test
+    void acceptOffer_ShouldThrowException_WhenDriverIsUnavailable() {
+        // Arrange: Keep the ride and offer valid.
+        ride.setStatus(RideStatus.REQUESTED);
+        ride.setDriver(null);
+        rideOffer.setStatus(RideOfferStatus.PENDING);
+        // Make the driver unavailable.
+        driver.setStatus(DriverStatus.BUSY);
+
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(ride));
+        when(rideOfferRepository.findByRide_IdAndDriver_Id(1L, 1L))
+                .thenReturn(Optional.of(rideOffer));
+        when(driverRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(driver));
+
+        // Act & Assert: Expect InvalidDriverStatusException.
+        assertThrows(InvalidDriverStatusException.class,
+                () -> rideOfferService.acceptOffer(1L, 1L));
+
+        // Verify no database save operations happen.
+        verify(rideOfferRepository, never()).save(any(RideOffer.class));
+        verify(rideOfferRepository, never()).saveAll(anyList());
+        verify(rideRepository, never()).save(any(Ride.class));
+        verify(driverRepository, never()).save(any(Driver.class));
+    }
+
+    @Test
+    void acceptOffer_ShouldThrowException_WhenUserIsNotDriver() {
+        // Arrange: Keep the ride and offer valid.
+        ride.setStatus(RideStatus.REQUESTED);
+        ride.setDriver(null);
+        rideOffer.setStatus(RideOfferStatus.PENDING);
+        // Driver is available, but the associated user has RIDER role.
+        driver.setStatus(DriverStatus.AVAILABLE);
+
+        User riderUser = new User();
+        riderUser.setRole(Role.RIDER);
+        driver.setUser(riderUser);
+
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(ride));
+        when(rideOfferRepository.findByRide_IdAndDriver_Id(1L, 1L))
+                .thenReturn(Optional.of(rideOffer));
+        when(driverRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(driver));
+
+        // Act & Assert: Expect InvalidDriverStatusException.
+        assertThrows(InvalidDriverStatusException.class,
+                () -> rideOfferService.acceptOffer(1L, 1L));
+
+        // Verify no database save operations happen.
+        verify(rideOfferRepository, never()).save(any(RideOffer.class));
+        verify(rideOfferRepository, never()).saveAll(anyList());
+        verify(rideRepository, never()).save(any(Ride.class));
+        verify(driverRepository, never()).save(any(Driver.class));
+    }
+
     // Assign an ID to entities whose IDs are normally generated by the database.
     private void setEntityId(Object entity, Long id) {
         try {
