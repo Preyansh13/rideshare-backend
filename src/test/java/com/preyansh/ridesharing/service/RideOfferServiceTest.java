@@ -75,7 +75,7 @@ class RideOfferServiceTest {
     }
 
     @Test
-    void createOffer_ShouldCreateOffer_WhenRideAndDriverAreValid() {
+    void createOffer_shouldCreateOffer_whenRideAndDriverAreValid() {
 
         // Arrange: Configure repositories to return valid test data
         when(rideRepository.findByIdForUpdate(1L))
@@ -102,7 +102,7 @@ class RideOfferServiceTest {
     }
 
     @Test
-    void createOffer_ShouldThrowException_WhenOfferAlreadyExists() {
+    void createOffer_shouldThrowException_whenOfferAlreadyExists() {
 
         // Arrange: Return an existing ride.
         when(rideRepository.findByIdForUpdate(1L))
@@ -127,7 +127,7 @@ class RideOfferServiceTest {
     }
 
     @Test
-    void createOffer_ShouldThrowException_WhenDriverIsUnavailable() {
+    void createOffer_shouldThrowException_whenDriverIsUnavailable() {
 
         // Arrange: Return an existing requested ride.
         when(rideRepository.findByIdForUpdate(1L))
@@ -150,7 +150,7 @@ class RideOfferServiceTest {
     }
 
     @Test
-    void rejectOffer_ShouldRejectOffer_WhenOfferIsPending() {
+    void rejectOffer_shouldRejectOffer_whenOfferIsPending() {
 
         // ARRANGE
         // Return the existing ride when the service searches for it.
@@ -180,7 +180,7 @@ class RideOfferServiceTest {
     }
 
     @Test
-    void rejectOffer_ShouldThrowException_WhenOfferIsAlreadyProcessed() {
+    void rejectOffer_shouldThrowException_whenOfferIsAlreadyProcessed() {
 
         // Arrange
         // Return the ride when the service searches for it.
@@ -205,7 +205,7 @@ class RideOfferServiceTest {
     }
 
     @Test
-    void rejectOffer_ShouldThrowException_WhenOfferDoesNotExist() {
+    void rejectOffer_shouldThrowException_whenOfferDoesNotExist() {
 
         // Arrange
         // Return the ride when the service searches for it.
@@ -226,7 +226,7 @@ class RideOfferServiceTest {
     }
 
     @Test
-    void rejectOffer_ShouldThrowException_WhenRideDoesNotExist() {
+    void rejectOffer_shouldThrowException_whenRideDoesNotExist() {
         // Arrange: Simulate that the requested ride does not exist.
         when(rideRepository.findByIdForUpdate(1L))
                 .thenReturn(Optional.empty());
@@ -246,7 +246,7 @@ class RideOfferServiceTest {
     }
 
     @Test
-    void acceptOffer_ShouldAcceptOffer_WhenOfferIsPending() {
+    void acceptOffer_shouldAcceptOffer_whenOfferIsPending() {
         // Arrange: Create another driver for the same ride.
         Driver anotherDriver = new Driver();
         anotherDriver.setId(2L);
@@ -306,7 +306,7 @@ class RideOfferServiceTest {
     }
 
     @Test
-    void acceptOffer_ShouldThrowException_WhenRideDoesNotExist() {
+    void acceptOffer_shouldThrowException_whenRideDoesNotExist() {
         // Arrange: Simulate a ride that does not exist.
         when(rideRepository.findByIdForUpdate(1L))
                 .thenReturn(Optional.empty());
@@ -321,7 +321,7 @@ class RideOfferServiceTest {
     }
 
     @Test
-    void acceptOffer_ShouldThrowException_WhenRideIsNotRequested() {
+    void acceptOffer_shouldThrowException_whenRideIsNotRequested() {
         // Arrange: Change the ride status to ACCEPTED.
         ride.setStatus(RideStatus.ACCEPTED);
         when(rideRepository.findByIdForUpdate(1L))
@@ -338,7 +338,7 @@ class RideOfferServiceTest {
     }
 
     @Test
-    void acceptOffer_ShouldThrowException_WhenDriverAlreadyAssigned() {
+    void acceptOffer_shouldThrowException_whenDriverAlreadyAssigned() {
         // Arrange: Create an available driver and assign them to the ride.
         Driver assignedDriver = new Driver();
         assignedDriver.setId(1L);
@@ -360,7 +360,7 @@ class RideOfferServiceTest {
     }
 
     @Test
-    void acceptOffer_ShouldThrowException_WhenOfferDoesNotExist() {
+    void acceptOffer_shouldThrowException_whenOfferDoesNotExist() {
         // Arrange: Ensure the ride is available for acceptance.
         ride.setStatus(RideStatus.REQUESTED);
         ride.setDriver(null);
@@ -383,7 +383,7 @@ class RideOfferServiceTest {
     }
 
     @Test
-    void acceptOffer_ShouldThrowException_WhenOfferIsAlreadyProcessed() {
+    void acceptOffer_shouldThrowException_whenOfferIsAlreadyProcessed() {
         // Arrange: Set ride status to REQUESTED.
         ride.setStatus(RideStatus.REQUESTED);
         ride.setDriver(null);
@@ -406,7 +406,7 @@ class RideOfferServiceTest {
     }
 
     @Test
-    void acceptOffer_ShouldThrowException_WhenDriverDoesNotExist() {
+    void acceptOffer_shouldThrowException_whenDriverDoesNotExist() {
         // Arrange: Keep the ride available for acceptance.
         ride.setStatus(RideStatus.REQUESTED);
         ride.setDriver(null);
@@ -432,7 +432,7 @@ class RideOfferServiceTest {
     }
 
     @Test
-    void acceptOffer_ShouldThrowException_WhenDriverIsUnavailable() {
+    void acceptOffer_shouldThrowException_whenDriverIsUnavailable() {
         // Arrange: Keep the ride and offer valid.
         ride.setStatus(RideStatus.REQUESTED);
         ride.setDriver(null);
@@ -459,7 +459,7 @@ class RideOfferServiceTest {
     }
 
     @Test
-    void acceptOffer_ShouldThrowException_WhenUserIsNotDriver() {
+    void acceptOffer_shouldThrowException_whenUserIsNotDriver() {
         // Arrange: Keep the ride and offer valid.
         ride.setStatus(RideStatus.REQUESTED);
         ride.setDriver(null);

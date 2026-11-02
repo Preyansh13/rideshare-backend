@@ -110,7 +110,7 @@ class DriverServiceTest {
     }
 
     @Test
-    void createDriver_shouldThrowExceptionWhenUserDoesNotExist() {
+    void createDriver_shouldThrowException_whenUserDoesNotExist() {
 
         // Arrange: user ID is not present.
         when(userRepository.findById(1L)).thenReturn(Optional.empty());
@@ -128,7 +128,7 @@ class DriverServiceTest {
     }
 
     @Test
-    void createDriver_shouldThrowExceptionWhenVehicleDoesNotExist() {
+    void createDriver_shouldThrowException_whenVehicleDoesNotExist() {
 
         // Arrange: user exists, but vehicle doesn't.
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
@@ -183,7 +183,7 @@ class DriverServiceTest {
     }
 
     @Test
-    void getDriverById_shouldThrowExceptionWhenDriverDoesNotExist() {
+    void getDriverById_shouldThrowException_whenDriverDoesNotExist() {
 
         // Arrange: driver ID doesn't exist.
         when(driverRepository.findById(999L))
@@ -259,7 +259,7 @@ class DriverServiceTest {
     }
 
     @Test
-    void getAllDrivers_shouldReturnEmptyListWhenNoDriversExist() {
+    void getAllDrivers_shouldReturnEmptyList_whenNoDriversExist() {
 
         // Arrange: repository returns an empty list.
         when(driverRepository.findAll()).thenReturn(List.of());
@@ -272,5 +272,212 @@ class DriverServiceTest {
         assertTrue(responses.isEmpty());
 
         verify(driverRepository).findAll();
+    }
+
+    @Test
+    void updateDriver_shouldUpdateDriverSuccessfully() {
+
+        // Arrange: create existing driver and associated entities.
+        Driver driver = mock(Driver.class);
+        User user = mock(User.class);
+        Vehicle oldVehicle = mock(Vehicle.class);
+        Vehicle newVehicle = mock(Vehicle.class);
+
+        when(driverRepository.findById(1L))
+                .thenReturn(Optional.of(driver));
+        when(vehicleRepository.findById(20L))
+                .thenReturn(Optional.of(newVehicle));
+        // New vehicle is not assigned to another driver.
+        when(driverRepository.existsByVehicle_Id(20L))
+                .thenReturn(false);
+
+        // Existing driver details.
+        when(driver.getVehicle()).thenReturn(oldVehicle, newVehicle);
+        when(driver.getStatus()).thenReturn(DriverStatus.AVAILABLE);
+        when(driver.getUser()).thenReturn(user);
+        when(driver.getId()).thenReturn(1L);
+        when(user.getId()).thenReturn(10L);
+        when(newVehicle.getId()).thenReturn(20L);
+        when(driver.getLicenseNumber()).thenReturn("MH987654321");
+        when(driverRepository.save(driver)).thenReturn(driver);
+
+        // Prepare update request.
+        DriverRequest request = new DriverRequest();
+        request.setLicenseNumber("MH987654321");
+        request.setVehicleId(20L);
+
+        // Act.
+        DriverResponse response = driverService.updateDriver(1L, request);
+
+        // Assert: verify response.
+        assertNotNull(response);
+        assertEquals(1L, response.getId());
+        assertEquals(10L, response.getUserId());
+        assertEquals(20L, response.getVehicleId());
+        assertEquals("MH987654321", response.getLicenseNumber());
+        assertEquals(DriverStatus.AVAILABLE, response.getStatus());
+
+        // Verify entity updates.
+        verify(driver).setLicenseNumber("MH987654321");
+        verify(driver).setVehicle(newVehicle);
+        verify(driverRepository).save(driver);
+    }
+
+    @Test
+    void updateDriver_shouldThrowException_whenDriverDoesNotExist() {
+
+        // Arrange: driver ID does not exist.
+        when(driverRepository.findById(999L))
+                .thenReturn(Optional.empty());
+
+        DriverRequest request = new DriverRequest();
+        request.setLicenseNumber("MH987654321");
+        request.setVehicleId(20L);
+
+        // Act + Assert.
+        assertThrows(
+                DriverNotFoundException.class,
+                () -> driverService.updateDriver(999L, request)
+        );
+
+        // No vehicle lookup or save should happen.
+        verifyNoInteractions(vehicleRepository);
+        verify(driverRepository, never()).save(any(Driver.class));
+    }
+
+    @Test
+    void updateDriver_shouldThrowException_whenVehicleDoesNotExist() {
+
+        // Arrange: driver exists, but requested vehicle doesn't.
+        Driver driver = mock(Driver.class);
+
+        when(driverRepository.findById(1L))
+                .thenReturn(Optional.of(driver));
+        when(vehicleRepository.findById(20L))
+                .thenReturn(Optional.empty());
+
+        DriverRequest request = new DriverRequest();
+        request.setLicenseNumber("MH987654321");
+        request.setVehicleId(20L);
+
+        // Act + Assert.
+        assertThrows(
+                VehicleNotFoundException.class,
+                () -> driverService.updateDriver(1L, request)
+        );
+
+        // Driver must not be saved.
+        verify(driverRepository, never()).save(any(Driver.class));
+    }
+
+    @Test
+    void updateDriver_shouldThrowException_whenVehicleIsAlreadyAssigned() {
+
+        // Arrange: existing driver and requested vehicle.
+        Driver driver = mock(Driver.class);
+        Vehicle oldVehicle = mock(Vehicle.class);
+
+        when(driverRepository.findById(1L))
+                .thenReturn(Optional.of(driver));
+        when(vehicleRepository.findById(20L))
+                .thenReturn(Optional.of(mock(Vehicle.class)));
+        when(driverRepository.existsByVehicle_Id(20L))
+                .thenReturn(true);
+
+        when(driver.getVehicle()).thenReturn(oldVehicle);
+        when(oldVehicle.getId()).thenReturn(10L);
+
+        DriverRequest request = new DriverRequest();
+        request.setLicenseNumber("MH987654321");
+        request.setVehicleId(20L);
+
+        // Act + Assert.
+        assertThrows(
+                IllegalStateException.class,
+                () -> driverService.updateDriver(1L, request)
+        );
+
+        // Driver should not be saved.
+        verify(driverRepository, never()).save(any(Driver.class));
+    }
+
+    @Test
+    void updateDriver_shouldAllowKeepingSameVehicle() {
+        // Arrange: the driver already has vehicle 20.
+        Driver driver = mock(Driver.class);
+        Vehicle existingVehicle = mock(Vehicle.class);
+
+        when(driverRepository.findById(1L))
+                .thenReturn(Optional.of(driver));
+        when(vehicleRepository.findById(20L))
+                .thenReturn(Optional.of(existingVehicle));
+        when(driverRepository.existsByVehicle_Id(20L))
+                .thenReturn(true);
+
+        when(driver.getVehicle()).thenReturn(existingVehicle);
+        when(existingVehicle.getId()).thenReturn(20L);
+        when(driver.getId()).thenReturn(1L);
+        when(driver.getUser()).thenReturn(mock(User.class));
+        when(driver.getLicenseNumber()).thenReturn("MH123456789");
+        when(driver.getStatus()).thenReturn(DriverStatus.AVAILABLE);
+
+        DriverRequest request = new DriverRequest();
+        request.setLicenseNumber("MH987654321");
+        request.setVehicleId(20L);
+
+        when(driverRepository.save(driver)).thenReturn(driver);
+
+        // Act
+        DriverResponse response = driverService.updateDriver(1L, request);
+
+        // Assert
+        assertEquals(1L, response.getId());
+        assertEquals(20L, response.getVehicleId());
+        assertEquals("MH123456789", response.getLicenseNumber());
+
+        verify(driverRepository).save(driver);
+    }
+
+    @Test
+    void updateDriverStatus_shouldUpdateStatusSuccessfully() {
+        // Arrange: create an existing driver.
+        Driver driver = mock(Driver.class);
+
+        when(driverRepository.findById(1L))
+                .thenReturn(Optional.of(driver));
+        when(driver.getId()).thenReturn(1L);
+        when(driver.getUser()).thenReturn(mock(User.class));
+        when(driver.getVehicle()).thenReturn(mock(Vehicle.class));
+        when(driver.getLicenseNumber()).thenReturn("MH123456789");
+        when(driver.getStatus()).thenReturn(DriverStatus.BUSY);
+        when(driverRepository.save(driver)).thenReturn(driver);
+
+        // Act
+        DriverResponse response = driverService.updateDriverStatus(
+                1L, DriverStatus.BUSY
+        );
+
+        // Assert
+        assertEquals(1L, response.getId());
+        assertEquals(DriverStatus.BUSY, response.getStatus());
+
+        verify(driver).setStatus(DriverStatus.BUSY);
+        verify(driverRepository).save(driver);
+    }
+
+    @Test
+    void updateDriverStatus_shouldThrowException_whenDriverDoesNotExist() {
+        // Arrange
+        when(driverRepository.findById(1L))
+                .thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(
+                DriverNotFoundException.class,
+                () -> driverService.updateDriverStatus(1L, DriverStatus.BUSY)
+        );
+
+        // Verify that no driver is saved.
+        verify(driverRepository, never()).save(any(Driver.class));
     }
 }

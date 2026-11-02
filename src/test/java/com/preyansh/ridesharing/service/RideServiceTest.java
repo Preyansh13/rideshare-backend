@@ -61,7 +61,7 @@ class RideServiceTest {
     }
 
     @Test
-    void cancelRequestedRideShouldCancelRideAndExpirePendingOffers() {
+    void cancelRequestedRide_shouldCancelRideAndExpirePendingOffers() {
         // Arrange: the ride exists and has not yet been assigned to a driver.
         when(rideRepository.findByIdForUpdate(8L))
                 .thenReturn(Optional.of(ride));
@@ -82,7 +82,7 @@ class RideServiceTest {
     }
 
     @Test
-    void cancelAcceptedRideShouldReleaseDriverAndExpirePendingOffers() {
+    void cancelAcceptedRide_shouldReleaseDriverAndExpirePendingOffers() {
         // Arrange: create an accepted ride with an assigned, busy driver.
         Driver driver = new Driver();
         driver.setId(4L);
@@ -108,7 +108,7 @@ class RideServiceTest {
     }
 
     @Test
-    void cancelRideInInvalidStateShouldThrowException() {
+    void cancelRideInInvalidState_shouldThrowException() {
         // Arrange: completed rides cannot be cancelled.
         ride.setStatus(RideStatus.COMPLETED);
 
@@ -128,7 +128,7 @@ class RideServiceTest {
     }
 
     @Test
-    void cancelNonexistentRideShouldThrowNotFoundException() {
+    void cancelNonexistentRide_shouldThrowNotFoundException() {
         // Arrange: no ride exists with the requested ID.
         when(rideRepository.findByIdForUpdate(999L))
                 .thenReturn(Optional.empty());
@@ -145,7 +145,7 @@ class RideServiceTest {
     }
 
     @Test
-    void startAcceptedRideShouldMoveToInProgress() {
+    void startAcceptedRide_shouldMoveToInProgress() {
         // Arrange: prepare a ride that has already been accepted.
         ride.setStatus(RideStatus.ACCEPTED);
 
@@ -167,7 +167,7 @@ class RideServiceTest {
     }
 
     @Test
-    void startRideInInvalidStateShouldThrowException() {
+    void startRideInInvalidState_shouldThrowException() {
         // Arrange: a requested ride cannot be started yet.
         ride.setStatus(RideStatus.REQUESTED);
 
@@ -185,7 +185,7 @@ class RideServiceTest {
     }
 
     @Test
-    void completeInProgressRideShouldCompleteAndReleaseDriver() {
+    void completeInProgressRide_shouldCompleteAndReleaseDriver() {
         // Arrange: create a ride that is currently in progress.
         ride.setStatus(RideStatus.IN_PROGRESS);
 
@@ -212,7 +212,7 @@ class RideServiceTest {
     }
 
     @Test
-    void completeRideInInvalidStateShouldThrowException() {
+    void completeRideInInvalidState_shouldThrowException() {
         // Arrange: the ride has not started yet.
         ride.setStatus(RideStatus.ACCEPTED);
 
@@ -231,7 +231,7 @@ class RideServiceTest {
     }
 
     @Test
-    void completeNonexistentRideShouldThrowNotFoundException() {
+    void completeNonexistentRide_shouldThrowNotFoundException() {
         // Arrange: simulate a ride that doesn't exist.
         when(rideRepository.findById(999L))
                 .thenReturn(Optional.empty());
