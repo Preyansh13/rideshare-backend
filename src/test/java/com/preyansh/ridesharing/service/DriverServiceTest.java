@@ -19,6 +19,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -197,5 +198,79 @@ class DriverServiceTest {
         verify(driverRepository).findById(999L);
     }
 
+    @Test
+    void getAllDrivers_shouldReturnAllDriversSuccessfully() {
 
+        // Arrange: create two mock Driver entities.
+        Driver driver1 = mock(Driver.class);
+        Driver driver2 = mock(Driver.class);
+
+        User user1 = mock(User.class);
+        User user2 = mock(User.class);
+
+        Vehicle vehicle1 = mock(Vehicle.class);
+        Vehicle vehicle2 = mock(Vehicle.class);
+
+        when(driverRepository.findAll())
+                .thenReturn(List.of(driver1, driver2));
+
+        // Configure the first driver.
+        when(driver1.getId()).thenReturn(1L);
+        when(driver1.getUser()).thenReturn(user1);
+        when(driver1.getVehicle()).thenReturn(vehicle1);
+        when(driver1.getLicenseNumber()).thenReturn("MH111111111");
+        when(driver1.getStatus()).thenReturn(DriverStatus.AVAILABLE);
+
+        when(user1.getId()).thenReturn(10L);
+        when(vehicle1.getId()).thenReturn(20L);
+
+        // Configure the second driver.
+        when(driver2.getId()).thenReturn(2L);
+        when(driver2.getUser()).thenReturn(user2);
+        when(driver2.getVehicle()).thenReturn(vehicle2);
+        when(driver2.getLicenseNumber()).thenReturn("MH222222222");
+        when(driver2.getStatus()).thenReturn(DriverStatus.OFFLINE);
+
+        when(user2.getId()).thenReturn(11L);
+        when(vehicle2.getId()).thenReturn(21L);
+
+        // Act: retrieve all drivers.
+        List<DriverResponse> responses = driverService.getAllDrivers();
+
+        // Assert: verify the returned list.
+        assertNotNull(responses);
+        assertEquals(2, responses.size());
+
+        // Verify first driver's response.
+        assertEquals(1L, responses.get(0).getId());
+        assertEquals(10L, responses.get(0).getUserId());
+        assertEquals(20L, responses.get(0).getVehicleId());
+        assertEquals("MH111111111", responses.get(0).getLicenseNumber());
+        assertEquals(DriverStatus.AVAILABLE, responses.get(0).getStatus());
+
+        // Verify second driver's response.
+        assertEquals(2L, responses.get(1).getId());
+        assertEquals(11L, responses.get(1).getUserId());
+        assertEquals(21L, responses.get(1).getVehicleId());
+        assertEquals("MH222222222", responses.get(1).getLicenseNumber());
+        assertEquals(DriverStatus.OFFLINE, responses.get(1).getStatus());
+
+        verify(driverRepository).findAll();
+    }
+
+    @Test
+    void getAllDrivers_shouldReturnEmptyListWhenNoDriversExist() {
+
+        // Arrange: repository returns an empty list.
+        when(driverRepository.findAll()).thenReturn(List.of());
+
+        // Act.
+        List<DriverResponse> responses = driverService.getAllDrivers();
+
+        // Assert.
+        assertNotNull(responses);
+        assertTrue(responses.isEmpty());
+
+        verify(driverRepository).findAll();
+    }
 }
