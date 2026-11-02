@@ -111,6 +111,17 @@ public class GlobalExceptionHandler {
                 .body(errorResponse);
     }
 
+    // Handles attempts to assign a vehicle that already belongs to another driver.
+    @ExceptionHandler(VehicleAlreadyAssignedException.class)
+    public ResponseEntity<ErrorResponse> handleVehicleAlreadyAssignedException(
+            VehicleAlreadyAssignedException ex,
+            HttpServletRequest request) {
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.value(), ex.getMessage(), request.getRequestURI());
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(errorResponse);
+    }
+
     // Handles requests for rides that cannot be found.
     @ExceptionHandler(RideNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleRideNotFoundException(RideNotFoundException ex, HttpServletRequest request) {

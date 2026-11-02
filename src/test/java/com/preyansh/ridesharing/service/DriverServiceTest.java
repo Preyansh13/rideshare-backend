@@ -4,6 +4,7 @@ import com.preyansh.ridesharing.dto.DriverRequest;
 import com.preyansh.ridesharing.dto.DriverResponse;
 import com.preyansh.ridesharing.exception.DriverNotFoundException;
 import com.preyansh.ridesharing.exception.UserNotFoundException;
+import com.preyansh.ridesharing.exception.VehicleAlreadyAssignedException;
 import com.preyansh.ridesharing.exception.VehicleNotFoundException;
 import com.preyansh.ridesharing.model.*;
 import com.preyansh.ridesharing.repository.DriverRepository;
@@ -393,7 +394,7 @@ class DriverServiceTest {
 
         // Act + Assert.
         assertThrows(
-                IllegalStateException.class,
+                VehicleAlreadyAssignedException.class,
                 () -> driverService.updateDriver(1L, request)
         );
 

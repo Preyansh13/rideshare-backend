@@ -4,6 +4,7 @@ import com.preyansh.ridesharing.dto.DriverRequest;
 import com.preyansh.ridesharing.dto.DriverResponse;
 import com.preyansh.ridesharing.exception.DriverNotFoundException;
 import com.preyansh.ridesharing.exception.UserNotFoundException;
+import com.preyansh.ridesharing.exception.VehicleAlreadyAssignedException;
 import com.preyansh.ridesharing.exception.VehicleNotFoundException;
 import com.preyansh.ridesharing.model.*;
 import com.preyansh.ridesharing.repository.DriverRepository;
@@ -54,8 +55,8 @@ public class DriverService {
 
         // Prevent assigning a vehicle that already belongs to another driver.
         if (driverRepository.existsByVehicle_Id(driverRequest.getVehicleId())) {
-            throw new IllegalStateException(
-                    "Vehicle is already assigned to another driver"
+            throw new VehicleAlreadyAssignedException(
+                    "Vehicle with id " + driverRequest.getVehicleId() + " is already assigned to another driver"
             );
         }
 
@@ -128,8 +129,8 @@ public class DriverService {
                 driver.getVehicle().getId().equals(driverRequest.getVehicleId());
 
         if (vehicleAlreadyAssigned && !sameVehicle) {
-            throw new IllegalStateException(
-                    "Vehicle is already assigned to another driver"
+            throw new VehicleAlreadyAssignedException(
+                    "Vehicle with id " + driverRequest.getVehicleId() + " is already assigned to another driver"
             );
         }
 
