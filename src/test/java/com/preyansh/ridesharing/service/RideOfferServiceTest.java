@@ -489,6 +489,193 @@ class RideOfferServiceTest {
         verify(driverRepository, never()).save(any(Driver.class));
     }
 
+    @Test
+    void createOffer_shouldThrowException_whenRideDoesNotExist() {
+        // Arrange: Simulate a ride that does not exist.
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.empty());
+
+        // Act & Assert.
+        assertThrows(
+                RideNotFoundException.class,
+                () -> rideOfferService.createOffer(1L, 1L)
+        );
+
+        // Verify that driver lookup never happens.
+        verifyNoInteractions(driverRepository, rideOfferRepository);
+    }
+
+    @Test
+    void createOffer_shouldThrowException_whenRideIsNotRequested() {
+        // Arrange: Change the ride status.
+        ride.setStatus(RideStatus.ACCEPTED);
+
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(ride));
+
+        // Act & Assert.
+        assertThrows(
+                InvalidRideStatusException.class,
+                () -> rideOfferService.createOffer(1L, 1L)
+        );
+
+        verifyNoInteractions(driverRepository, rideOfferRepository);
+    }
+
+    @Test
+    void createOffer_shouldThrowException_whenDriverDoesNotExist() {
+        // Arrange.
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(ride));
+
+        when(driverRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.empty());
+
+        // Act & Assert.
+        assertThrows(
+                DriverNotFoundException.class,
+                () -> rideOfferService.createOffer(1L, 1L)
+        );
+
+        verify(rideOfferRepository, never()).save(any(RideOffer.class));
+    }
+
+    @Test
+    void createOffer_shouldThrowException_whenUserIsNotDriver() {
+        // Arrange: Driver is available, but user has RIDER role.
+        user.setRole(Role.RIDER);
+
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(ride));
+
+        when(driverRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(driver));
+
+        // Act & Assert.
+        assertThrows(
+                InvalidDriverStatusException.class,
+                () -> rideOfferService.createOffer(1L, 1L)
+        );
+
+        verify(rideOfferRepository, never()).save(any(RideOffer.class));
+    }
+
+    @Test
+    void createOffer_shouldThrowException_whenRideAlreadyHasDriver() {
+        // Arrange.
+        ride.setDriver(driver);
+
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(ride));
+
+        // Act & Assert.
+        assertThrows(
+                InvalidRideStatusException.class,
+                () -> rideOfferService.createOffer(1L, 1L)
+        );
+
+        verifyNoInteractions(driverRepository, rideOfferRepository);
+    }
+
+    @Test
+    void rejectOffer_shouldThrowException_whenRideIsNotRequested() {
+        // Arrange.
+        ride.setStatus(RideStatus.ACCEPTED);
+
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(ride));
+
+        // Act & Assert.
+        assertThrows(
+                InvalidRideStatusException.class,
+                () -> rideOfferService.rejectOffer(1L, 1L)
+        );
+
+        verifyNoInteractions(rideOfferRepository, driverRepository);
+    }
+
+    @Test
+    void rejectOffer_shouldThrowException_whenDriverDoesNotExist() {
+        // Arrange.
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(ride));
+
+        when(rideOfferRepository.findByRide_IdAndDriver_Id(1L, 1L))
+                .thenReturn(Optional.of(rideOffer));
+
+        when(driverRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.empty());
+
+        // Act & Assert.
+        assertThrows(
+                DriverNotFoundException.class,
+                () -> rideOfferService.rejectOffer(1L, 1L)
+        );
+
+        verify(rideOfferRepository, never()).save(any(RideOffer.class));
+    }
+
+    @Test
+    void rejectOffer_shouldThrowException_whenUserIsNotDriver() {
+        // Arrange.
+        user.setRole(Role.RIDER);
+
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(ride));
+
+        when(rideOfferRepository.findByRide_IdAndDriver_Id(1L, 1L))
+                .thenReturn(Optional.of(rideOffer));
+
+        when(driverRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(driver));
+
+        // Act & Assert.
+        assertThrows(
+                InvalidDriverStatusException.class,
+                () -> rideOfferService.rejectOffer(1L, 1L)
+        );
+
+        verify(rideOfferRepository, never()).save(any(RideOffer.class));
+    }
+
+    @Test
+    void expirePendingOffers_shouldExpireAllPendingOffers_whenOffersExist() {
+        // Arrange: Create another pending offer.
+        RideOffer anotherOffer = new RideOffer();
+        anotherOffer.setRide(ride);
+        anotherOffer.setDriver(driver);
+        anotherOffer.setStatus(RideOfferStatus.PENDING);
+
+        List<RideOffer> pendingOffers = List.of(rideOffer, anotherOffer);
+
+        when(rideOfferRepository.findByRide_IdAndStatus(
+                1L, RideOfferStatus.PENDING
+        )).thenReturn(pendingOffers);
+
+        // Act.
+        rideOfferService.expirePendingOffers(1L);
+
+        // Assert.
+        assertEquals(RideOfferStatus.EXPIRED, rideOffer.getStatus());
+        assertEquals(RideOfferStatus.EXPIRED, anotherOffer.getStatus());
+
+        verify(rideOfferRepository).saveAll(pendingOffers);
+    }
+
+    @Test
+    void expirePendingOffers_shouldSaveEmptyList_whenNoPendingOffersExist() {
+        // Arrange.
+        when(rideOfferRepository.findByRide_IdAndStatus(
+                1L, RideOfferStatus.PENDING
+        )).thenReturn(List.of());
+
+        // Act.
+        rideOfferService.expirePendingOffers(1L);
+
+        // Assert.
+        verify(rideOfferRepository).saveAll(List.of());
+    }
+
     // Assign an ID to entities whose IDs are normally generated by the database.
     private void setEntityId(Object entity, Long id) {
         try {
