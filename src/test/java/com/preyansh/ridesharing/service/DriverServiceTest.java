@@ -150,6 +150,33 @@ class DriverServiceTest {
     }
 
     @Test
+    void createDriver_shouldThrowException_whenVehicleIsAlreadyAssigned() {
+
+        // Arrange: user and vehicle exist, but the vehicle is already assigned.
+        when(userRepository.findById(1L))
+                .thenReturn(Optional.of(user));
+
+        when(vehicleRepository.findById(10L))
+                .thenReturn(Optional.of(vehicle));
+
+        when(driverRepository.existsByVehicle_Id(10L))
+                .thenReturn(true);
+
+        // Act & Assert.
+        assertThrows(
+                VehicleAlreadyAssignedException.class,
+                () -> driverService.createDriver(driverRequest)
+        );
+
+        // Verify user role promotion.
+        verify(user).setRole(Role.DRIVER);
+        verify(userRepository).save(user);
+
+        // A driver must not be created.
+        verify(driverRepository, never()).save(any(Driver.class));
+    }
+
+    @Test
     void getDriverById_shouldReturnDriverSuccessfully() {
 
         // Arrange: create mock entities.
@@ -434,8 +461,7 @@ class DriverServiceTest {
         // Assert
         assertEquals(1L, response.getId());
         assertEquals(20L, response.getVehicleId());
-        assertEquals("MH123456789", response.getLicenseNumber());
-
+        verify(driver).setLicenseNumber("MH987654321");
         verify(driverRepository).save(driver);
     }
 
