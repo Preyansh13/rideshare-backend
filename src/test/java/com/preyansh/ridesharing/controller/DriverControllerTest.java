@@ -1,9 +1,10 @@
-
 package com.preyansh.ridesharing.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.preyansh.ridesharing.dto.DriverRequest;
 import com.preyansh.ridesharing.dto.DriverResponse;
+import com.preyansh.ridesharing.exception.DriverNotFoundException;
+import com.preyansh.ridesharing.exception.InvalidDriverStatusException;
 import com.preyansh.ridesharing.model.DriverStatus;
 import com.preyansh.ridesharing.service.DriverService;
 
@@ -33,7 +34,6 @@ class DriverControllerTest {
     @MockitoBean
     private DriverService driverService;
 
-    // 1. CREATE DRIVER
     @Test
     void createDriver_shouldReturnCreatedStatus() throws Exception {
 
@@ -66,7 +66,6 @@ class DriverControllerTest {
                 .andExpect(jsonPath("$.status").value("AVAILABLE"));
     }
 
-    // 2. GET ALL DRIVERS
     @Test
     void getAllDrivers_shouldReturnAllDriversSuccessfully() throws Exception {
 
@@ -96,7 +95,17 @@ class DriverControllerTest {
                 .andExpect(jsonPath("$[1].id").value(5));
     }
 
-    // 3. GET DRIVER BY ID
+    @Test
+    void getAllDrivers_shouldReturnEmptyList_whenNoDriversExist() throws Exception {
+
+        // Mock the service to return an empty list.
+        when(driverService.getAllDrivers()).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/drivers"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
     @Test
     void getDriverById_shouldReturnDriverSuccessfully() throws Exception {
 
@@ -120,7 +129,17 @@ class DriverControllerTest {
                 .andExpect(jsonPath("$.status").value("AVAILABLE"));
     }
 
-    // 4. UPDATE DRIVER
+    @Test
+    void getDriverById_shouldReturnNotFound_whenDriverDoesNotExist() throws Exception {
+
+        // Mock the service to throw DriverNotFoundException.
+        when(driverService.getDriverById(999L))
+                .thenThrow(new DriverNotFoundException("Driver not found"));
+
+        mockMvc.perform(get("/api/drivers/{driverId}", 999L))
+                .andExpect(status().isNotFound());
+    }
+
     @Test
     void updateDriver_shouldReturnUpdatedDriverSuccessfully() throws Exception {
 
@@ -151,7 +170,6 @@ class DriverControllerTest {
                 .andExpect(jsonPath("$.vehicleId").value(5));
     }
 
-    // 5. UPDATE DRIVER STATUS
     @Test
     void updateDriverStatus_shouldReturnUpdatedStatusSuccessfully() throws Exception {
 
@@ -172,5 +190,34 @@ class DriverControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(5))
                 .andExpect(jsonPath("$.status").value("BUSY"));
+    }
+
+    @Test
+    void updateDriverStatus_shouldReturnConflict_whenDriverStatusIsInvalid() throws Exception {
+
+        // Mock the service to throw InvalidDriverStatusException.
+        when(driverService.updateDriverStatus(5L, DriverStatus.BUSY))
+                .thenThrow(new InvalidDriverStatusException("Driver is not available"));
+
+        mockMvc.perform(patch("/api/drivers/{driverId}/status", 5L)
+                        .param("status", "BUSY"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void updateDriverStatus_shouldReturnBadRequest_whenStatusIsInvalid() throws Exception {
+
+        // BUSYYY is not a valid DriverStatus enum value.
+        mockMvc.perform(patch("/api/drivers/{driverId}/status", 5L)
+                        .param("status", "BUSYYY"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateDriverStatus_shouldReturnBadRequest_whenStatusParameterIsMissing() throws Exception {
+
+        // Send PATCH without the required status parameter.
+        mockMvc.perform(patch("/api/drivers/{driverId}/status", 5L))
+                .andExpect(status().isBadRequest());
     }
 }
