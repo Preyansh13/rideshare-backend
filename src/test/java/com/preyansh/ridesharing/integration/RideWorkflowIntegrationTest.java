@@ -182,4 +182,78 @@ class RideWorkflowIntegrationTest {
         assertThat(expiredOffer.getStatus())
                 .isEqualTo(RideOfferStatus.EXPIRED);
     }
+
+    @Test
+    void shouldCompleteRideLifecycleAndMakeDriverAvailableAgain() {
+
+        // ARRANGE: Create a rider.
+        User rider = new User();
+        rider.setName("Lifecycle Rider");
+        rider.setEmail("rider_lifecycle@test.com");
+        rider.setPhone("9000000011");
+        rider.setRole(Role.RIDER);
+        rider = userRepository.saveAndFlush(rider);
+
+        // ARRANGE: Create a driver user.
+        User driverUser = new User();
+        driverUser.setName("Lifecycle Driver");
+        driverUser.setEmail("driver_lifecycle@test.com");
+        driverUser.setPhone("9000000012");
+        driverUser.setRole(Role.DRIVER);
+        driverUser = userRepository.saveAndFlush(driverUser);
+
+        // ARRANGE: Register the driver's vehicle.
+        Vehicle vehicle = new Vehicle();
+        vehicle.setRegistrationNumber("MH12LC1234");
+        vehicle.setModel("Maruti Swift");
+        vehicle.setVehicleType(VehicleType.HATCHBACK);
+        vehicle = vehicleRepository.saveAndFlush(vehicle);
+
+        // ARRANGE: Create an available driver.
+        Driver driver = new Driver();
+        driver.setUser(driverUser);
+        driver.setVehicle(vehicle);
+        driver.setLicenseNumber("LIC-LIFECYCLE-001");
+        driver.setStatus(DriverStatus.AVAILABLE);
+        driver = driverRepository.saveAndFlush(driver);
+
+        // ACT: Create a ride.
+        RideRequest request = new RideRequest(
+                rider.getId(),
+                "Pune Station",
+                "Hinjewadi"
+        );
+
+        RideResponse rideResponse = rideService.createRide(request);
+        Long rideId = rideResponse.id();
+
+        // ACT: Create and accept the driver's offer.
+        rideOfferService.createOffer(rideId, driver.getId());
+        rideOfferService.acceptOffer(rideId, driver.getId());
+
+        // Verify the ride has been accepted.
+        Ride acceptedRide = rideRepository.findById(rideId).orElseThrow();
+        assertThat(acceptedRide.getStatus()).isEqualTo(RideStatus.ACCEPTED);
+
+        // Verify the driver becomes busy after accepting.
+        Driver busyDriver = driverRepository.findById(driver.getId()).orElseThrow();
+        assertThat(busyDriver.getStatus()).isEqualTo(DriverStatus.BUSY);
+
+        // ACT: Start the ride.
+        rideService.startRide(rideId);
+
+        Ride startedRide = rideRepository.findById(rideId).orElseThrow();
+        assertThat(startedRide.getStatus()).isEqualTo(RideStatus.IN_PROGRESS);
+
+        // ACT: Complete the ride.
+        rideService.completeRide(rideId);
+
+        // ASSERT: Verify the ride is completed.
+        Ride completedRide = rideRepository.findById(rideId).orElseThrow();
+        assertThat(completedRide.getStatus()).isEqualTo(RideStatus.COMPLETED);
+
+        // ASSERT: Verify the driver becomes available again.
+        Driver availableDriver = driverRepository.findById(driver.getId()).orElseThrow();
+        assertThat(availableDriver.getStatus()).isEqualTo(DriverStatus.AVAILABLE);
+    }
 }
