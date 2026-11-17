@@ -2,6 +2,7 @@ package com.preyansh.ridesharing.integration;
 
 import com.preyansh.ridesharing.dto.RideRequest;
 import com.preyansh.ridesharing.dto.RideResponse;
+import com.preyansh.ridesharing.exception.InvalidRideStatusException;
 import com.preyansh.ridesharing.model.*;
 import com.preyansh.ridesharing.repository.*;
 import com.preyansh.ridesharing.service.RideOfferService;
@@ -10,14 +11,13 @@ import com.preyansh.ridesharing.service.RideService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-
-import com.preyansh.ridesharing.exception.InvalidRideStatusException;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -26,6 +26,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @Testcontainers
@@ -397,6 +398,185 @@ class RideWorkflowIntegrationTest {
             start.countDown();
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    void shouldPreventDuplicateRideOffersAtDatabaseLevel() {
+
+        // ARRANGE: Create a ride and an available driver.
+        RideAndDriver testData = createRideAndDriver(
+                "duplicate_db",
+                "41",
+                "MH12DD1234"
+        );
+
+        Ride ride = rideRepository.findById(testData.rideId()).orElseThrow();
+        Driver driver = driverRepository.findById(testData.driverId()).orElseThrow();
+
+        // ACT: Create and persist the first offer.
+        RideOffer firstOffer = new RideOffer();
+        firstOffer.setRide(ride);
+        firstOffer.setDriver(driver);
+        firstOffer.setStatus(RideOfferStatus.PENDING);
+
+        rideOfferRepository.saveAndFlush(firstOffer);
+
+        // ASSERT: PostgreSQL must reject another offer for the same ride-driver pair.
+        RideOffer duplicateOffer = new RideOffer();
+        duplicateOffer.setRide(ride);
+        duplicateOffer.setDriver(driver);
+        duplicateOffer.setStatus(RideOfferStatus.PENDING);
+
+        assertThatThrownBy(() ->
+                rideOfferRepository.saveAndFlush(duplicateOffer)
+        ).isInstanceOf(DataIntegrityViolationException.class);
+
+        // Verify that only one pending offer exists in the database.
+        assertThat(
+                rideOfferRepository.findByRide_IdAndStatus(
+                        testData.rideId(),
+                        RideOfferStatus.PENDING
+                )
+        ).hasSize(1);
+    }
+
+    @Test
+    void shouldPreventConcurrentDuplicateRideOfferCreation() throws Exception {
+
+        // ARRANGE: Create a ride and an available driver.
+        RideAndDriver testData = createRideAndDriver(
+                "duplicate_concurrent",
+                "42",
+                "MH12DC1234"
+        );
+
+        // Both threads wait until they are ready to create the same offer.
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+
+        // Store IDs in effectively final variables for lambda usage.
+        final Long rideId = testData.rideId();
+        final Long driverId = testData.driverId();
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        try {
+            // Submit both offer creation attempts to separate threads.
+            Future<Boolean> firstResult = executor.submit(() ->
+                    attemptConcurrentOfferCreation(rideId, driverId, ready, start));
+
+            Future<Boolean> secondResult = executor.submit(() ->
+                    attemptConcurrentOfferCreation(rideId, driverId, ready, start));
+
+            // Wait until both threads are ready.
+            assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
+
+            // Release both threads at approximately the same time.
+            start.countDown();
+
+            boolean firstCreated = firstResult.get(30, TimeUnit.SECONDS);
+            boolean secondCreated = secondResult.get(30, TimeUnit.SECONDS);
+
+            // Exactly one request must successfully create the offer.
+            assertThat(firstCreated).isNotEqualTo(secondCreated);
+
+            // ASSERT: Verify that only one offer exists for the ride-driver pair.
+            assertThat(
+                    rideOfferRepository.findByRide_IdAndStatus(
+                            rideId,
+                            RideOfferStatus.PENDING
+                    )
+            ).hasSize(1);
+
+            RideOffer savedOffer = rideOfferRepository
+                    .findByRide_IdAndDriver_Id(rideId, driverId)
+                    .orElseThrow();
+
+            assertThat(savedOffer.getStatus()).isEqualTo(RideOfferStatus.PENDING);
+
+        } finally {
+            // Always release waiting threads and shut down the executor.
+            start.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    private RideAndDriver createRideAndDriver(
+            String emailSuffix,
+            String phoneSuffix,
+            String registrationNumber
+    ) {
+
+        // ARRANGE: Create and persist a rider.
+        User rider = new User();
+        rider.setName("Duplicate Offer Rider");
+        rider.setEmail("rider_" + emailSuffix + "@test.com");
+        rider.setPhone("90000000" + phoneSuffix);
+        rider.setRole(Role.RIDER);
+
+        rider = userRepository.saveAndFlush(rider);
+
+        // ARRANGE: Create and persist a driver user.
+        User driverUser = new User();
+        driverUser.setName("Duplicate Offer Driver");
+        driverUser.setEmail("driver_" + emailSuffix + "@test.com");
+        driverUser.setPhone("91000000" + phoneSuffix);
+        driverUser.setRole(Role.DRIVER);
+
+        driverUser = userRepository.saveAndFlush(driverUser);
+
+        // ARRANGE: Create and persist a vehicle.
+        Vehicle vehicle = new Vehicle();
+        vehicle.setRegistrationNumber(registrationNumber);
+        vehicle.setModel("Honda City");
+        vehicle.setVehicleType(VehicleType.SEDAN);
+
+        vehicle = vehicleRepository.saveAndFlush(vehicle);
+
+        // ARRANGE: Create and persist an available driver.
+        Driver driver = new Driver();
+        driver.setUser(driverUser);
+        driver.setVehicle(vehicle);
+        driver.setLicenseNumber("LIC-" + emailSuffix.toUpperCase());
+        driver.setStatus(DriverStatus.AVAILABLE);
+
+        driver = driverRepository.saveAndFlush(driver);
+
+        // ARRANGE: Create a ride through the actual RideService.
+        RideRequest request = new RideRequest(
+                rider.getId(),
+                "Pune Station",
+                "Hinjewadi"
+        );
+
+        RideResponse rideResponse = rideService.createRide(request);
+
+        return new RideAndDriver(rideResponse.id(), driver.getId());
+    }
+
+    private boolean attemptConcurrentOfferCreation(
+            Long rideId,
+            Long driverId,
+            CountDownLatch ready,
+            CountDownLatch start
+    ) throws InterruptedException {
+
+        // Signal that this thread is ready.
+        ready.countDown();
+
+        // Wait until both threads are released together.
+        start.await();
+
+        try {
+            rideOfferService.createOffer(rideId, driverId);
+            return true;
+        } catch (InvalidRideStatusException exception) {
+            // Another request has already created an offer for this ride-driver pair.
+            return false;
+        }
+    }
+
+    private record RideAndDriver(Long rideId, Long driverId) {
     }
 
     private boolean attemptConcurrentAcceptance(
