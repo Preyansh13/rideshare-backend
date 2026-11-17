@@ -1,154 +1,129 @@
 # RideShare Backend
 
-A ride-sharing backend built with **Java 21, Spring Boot, Spring Data
-JPA, PostgreSQL, and REST APIs**. The project follows a layered
-monolithic architecture and implements user, driver, and vehicle
-management, ride lifecycle operations, and a dedicated ride-offer
-workflow.
+A ride-sharing backend built with **Java 21, Spring Boot, Spring Data JPA, and PostgreSQL**. The project follows a layered monolithic architecture and implements user, driver, vehicle, ride lifecycle, and ride-offer management.
 
-The goal is to build a practical backend engineering project
-demonstrating REST API design, relational database modeling, validation,
-transaction management, database locking, concurrency control,
-business-rule enforcement, unit testing, PostgreSQL integration testing,
-and Git-based development.
+The goal is to demonstrate practical backend engineering concepts, including REST API design, relational database modeling, validation, transaction management, pessimistic database locking, concurrency control, business-rule enforcement, automated testing, PostgreSQL integration testing, and Git-based development.
 
 ## Tech Stack
 
--   **Language:** Java 21
--   **Framework:** Spring Boot 4.1.1
--   **Persistence:** Spring Data JPA / Hibernate
--   **Database:** PostgreSQL
--   **Build Tool:** Maven
--   **API Design:** REST APIs
--   **API Documentation:** Springdoc OpenAPI / Swagger UI
--   **Validation:** Jakarta Bean Validation
--   **Testing:** JUnit 5, Mockito, Spring MVC Test / MockMvc, Spring
-    Boot Test, Testcontainers (PostgreSQL), AssertJ, Postman
--   **Development Environment:** IntelliJ IDEA
--   **Version Control:** Git and GitHub
+| Category | Technology |
+|---|---|
+| Language | Java 21 |
+| Framework | Spring Boot 4.1.1 |
+| Persistence | Spring Data JPA / Hibernate |
+| Database | PostgreSQL |
+| Build Tool | Maven |
+| API Design | REST APIs |
+| API Documentation | Springdoc OpenAPI / Swagger UI |
+| Validation | Jakarta Bean Validation |
+| Testing | JUnit 5, Mockito, MockMvc, Spring Boot Test, Testcontainers, AssertJ |
+| API Testing | Postman |
+| Development Environment | IntelliJ IDEA |
+| Version Control | Git and GitHub |
 
 ## Features
 
 ### 1. User Management
 
--   Create, retrieve, update, partially update, and delete users.
--   DTO-based request and response handling.
--   Layered architecture: Controller → Service → Repository.
--   PostgreSQL persistence using Spring Data JPA.
--   Application-level duplicate checks and database uniqueness
-    constraints for email and phone.
--   User roles: `RIDER` and `DRIVER`.
--   Search users independently by name and email.
--   Pagination and sorting through Spring Data `Pageable`.
--   Validation for names, email addresses, and phone numbers.
--   Structured exception handling for missing users and duplicate user
-    details.
--   Automatic `RIDER` role assignment during ordinary user creation.
--   Automatic promotion to the `DRIVER` role during driver registration.
+- Create, retrieve, update, partially update, and delete users.
+- DTO-based request and response handling.
+- Layered architecture: Controller → Service → Repository.
+- PostgreSQL persistence using Spring Data JPA.
+- Application-level duplicate checks and database uniqueness constraints for email and phone.
+- User roles: `RIDER` and `DRIVER`.
+- Search users independently by name and email.
+- Pagination and sorting through Spring Data `Pageable`.
+- Validation for names, email addresses, and phone numbers.
+- Structured exception handling for missing users and duplicate user details.
+- Automatic `RIDER` role assignment during ordinary user creation.
+- Automatic promotion to the `DRIVER` role during driver registration.
 
 ### 2. Driver Management
 
--   Register a driver using an existing user, vehicle, and driving
-    license number.
--   Retrieve all drivers or a driver by ID.
--   Update driver license and vehicle details.
--   Update driver availability through a dedicated status endpoint.
--   Driver availability states: `AVAILABLE`, `BUSY`, and `OFFLINE`.
--   Prevent assigning one vehicle to multiple drivers.
--   One-to-one relationships between a driver and their user, and
-    between a driver and their vehicle.
--   Database uniqueness and non-null constraints for driver
-    relationships and license number.
--   Driver lookup and availability validation during ride-offer
-    operations.
--   Driver availability updates during offer acceptance, ride
-    cancellation, and ride completion.
+- Register a driver using an existing user, vehicle, and driving license number.
+- Retrieve all drivers or a driver by ID.
+- Update driver license and vehicle details.
+- Update driver availability through a dedicated status endpoint.
+- Driver availability states: `AVAILABLE`, `BUSY`, and `OFFLINE`.
+- Prevent assigning one vehicle to multiple drivers.
+- One-to-one relationships between a driver and their user, and between a driver and their vehicle.
+- Database uniqueness and non-null constraints for driver relationships and license number.
+- Driver lookup and availability validation during ride-offer operations.
+- Driver availability updates during offer acceptance, ride cancellation, and ride completion.
 
 ### 3. Vehicle Management
 
--   Create, retrieve, update, and delete vehicles.
--   Vehicle entity with a unique, required registration number.
--   Registration numbers are normalized by trimming whitespace and
-    converting to uppercase.
--   Vehicle type classification: `HATCHBACK`, `SEDAN`, `SUV`, and `MUV`.
--   Driver-to-vehicle relationship.
--   Prevent deletion of a vehicle while it is assigned to a driver.
--   Database-level foreign key and uniqueness constraints.
+- Create, retrieve, update, and delete vehicles.
+- Vehicle entity with a unique, required registration number.
+- Registration numbers are normalized by trimming whitespace and converting to uppercase.
+- Vehicle types: `HATCHBACK`, `SEDAN`, `SUV`, and `MUV`.
+- Driver-to-vehicle relationship.
+- Prevent deletion of a vehicle while it is assigned to a driver.
+- Database-level foreign key and uniqueness constraints.
 
 ### 4. Ride Management
 
--   Create and retrieve ride requests.
--   Retrieve rides by ID, rider ID, and driver ID.
--   Filter rides by status.
--   Ride lifecycle represented by a `RideStatus` enum.
--   Automatic ride request timestamp using a JPA lifecycle callback.
--   Driver assignment through the ride-offer workflow.
--   Start accepted rides.
--   Complete rides that are in progress.
--   Cancel rides in eligible states.
--   Restore driver availability when an accepted ride is cancelled or a
-    ride is completed.
--   Expire pending offers when a ride is cancelled.
--   Validate ride status transitions and driver availability.
--   Transaction-managed ride and driver state changes.
--   DTO-based ride responses, including a nullable driver ID before
-    assignment.
--   Pessimistic write locking for ride operations involved in offer
-    creation, acceptance, rejection, and cancellation.
+- Create and retrieve ride requests.
+- Retrieve rides by ID, rider ID, and driver ID.
+- Filter rides by status.
+- Ride lifecycle represented by a `RideStatus` enum.
+- Automatic ride request timestamp using a JPA lifecycle callback.
+- Driver assignment through the ride-offer workflow.
+- Start accepted rides.
+- Complete rides that are in progress.
+- Cancel rides in eligible states.
+- Restore driver availability when an accepted ride is cancelled or a ride is completed.
+- Expire pending offers when a ride is cancelled.
+- Validate ride status transitions and driver availability.
+- Transaction-managed ride and driver state changes.
+- DTO-based ride responses, including a nullable driver ID before assignment.
+- Pessimistic write locking for ride operations involved in offer creation, acceptance, rejection, and cancellation.
 
 ### 5. Ride Offer Management
 
-A dedicated offer workflow allows drivers to receive offers for
-requested rides and accept or reject them independently of the overall
-ride request.
+A dedicated offer workflow allows drivers to receive offers for requested rides and accept or reject them independently of the overall ride request.
 
--   Create a ride offer for a specific driver.
--   Accept a pending offer and assign the driver to the ride.
--   Reject an offer without rejecting the entire ride request.
--   Track offer states using `RideOfferStatus`.
--   Prevent duplicate offers for the same ride-driver pair through
-    application-level validation and a database uniqueness constraint.
--   Validate ride status, driver availability, user role, and offer
-    status before processing an offer.
--   Use transaction management and pessimistic write locks on the ride
-    and driver records during offer creation, acceptance, and rejection.
--   Expire other pending offers when a driver accepts a ride.
--   Expire pending offers when the associated ride is cancelled.
--   Keep rejected offers distinct from expired offers.
--   Record offer creation time automatically.
+- Create a ride offer for a specific driver.
+- Accept a pending offer and assign the driver to the ride.
+- Reject an offer without rejecting the entire ride request.
+- Track offer states using `RideOfferStatus`.
+- Prevent duplicate offers for the same ride-driver pair through application-level validation and a database uniqueness constraint.
+- Validate ride status, driver availability, user role, and offer status before processing an offer.
+- Use transaction management and pessimistic write locks on ride and driver records during offer operations.
+- Expire other pending offers when a driver accepts a ride.
+- Expire pending offers when the associated ride is cancelled.
+- Keep rejected offers distinct from expired offers.
+- Record offer creation time automatically.
+- Test duplicate offer prevention at both the application and PostgreSQL database levels.
+- Test concurrent attempts to create duplicate offers for the same ride-driver pair.
 
 Offer statuses:
 
--   `PENDING`
--   `ACCEPTED`
--   `REJECTED`
--   `EXPIRED`
+- `PENDING`
+- `ACCEPTED`
+- `REJECTED`
+- `EXPIRED`
 
 ### 6. Validation and Error Handling
 
--   Jakarta Bean Validation on supported request DTOs.
--   Required-field, email-format, and phone-number validation.
--   Custom validation messages.
--   Global exception handling using `@RestControllerAdvice`.
--   Structured API error responses containing HTTP status, message,
-    request path, and timestamp.
--   Field-level validation error responses.
--   HTTP `400 Bad Request`, `404 Not Found`, and `409 Conflict`
-    handling.
--   Database constraint violation handling.
--   Custom exceptions for missing users, drivers, vehicles, and rides.
--   Business-rule validation for ride and offer lifecycle transitions.
--   Rejection of invalid repeated state transitions, such as starting an
-    already-started ride or accepting an offer that is no longer
-    pending.
+- Jakarta Bean Validation on supported request DTOs.
+- Required-field, email-format, and phone-number validation.
+- Custom validation messages.
+- Global exception handling using `@RestControllerAdvice`.
+- Structured API error responses containing HTTP status, message, request path, and timestamp.
+- Field-level validation error responses.
+- HTTP `400 Bad Request`, `404 Not Found`, and `409 Conflict` handling.
+- Database constraint violation handling.
+- Custom exceptions for missing users, drivers, vehicles, and rides.
+- Business-rule validation for ride and offer lifecycle transitions.
+- Rejection of invalid repeated state transitions, such as starting an already-started ride or accepting an offer that is no longer pending.
 
 ### 7. API Documentation
 
--   Springdoc OpenAPI integration.
--   OpenAPI metadata configured for the RideShare Backend API.
--   Interactive Swagger UI for exploring and testing endpoints.
--   API documentation generated from the application's REST API
-    definitions.
+- Springdoc OpenAPI integration.
+- OpenAPI metadata configured for the RideShare Backend API.
+- Interactive Swagger UI for exploring and testing endpoints.
+- API documentation generated from the application's REST API definitions.
 
 ## API Documentation
 
@@ -158,135 +133,82 @@ Base URL for local development:
 
 ### User APIs
 
-  -----------------------------------------------------------------------------------------
-Method                  Endpoint                                  Purpose
-  ----------------------- ----------------------------------------- -----------------------
-GET                     `/api/users`                              Retrieve users with
-pagination and sorting
-
-GET                     `/api/users/{id}`                         Retrieve a user by ID
-
-POST                    `/api/users`                              Create a user
-
-PUT                     `/api/users/{id}`                         Fully update a user
-
-PATCH                   `/api/users/{id}`                         Partially update a user
-
-DELETE                  `/api/users/{id}`                         Delete a user
-
-GET                     `/api/users/search/name?name={name}`      Search users by name
-
-GET                     `/api/users/search/email?email={email}`   Search users by email
------------------------------------------------------------------------------------------
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/users` | Retrieve users with pagination and sorting |
+| GET | `/api/users/{id}` | Retrieve a user by ID |
+| POST | `/api/users` | Create a user |
+| PUT | `/api/users/{id}` | Fully update a user |
+| PATCH | `/api/users/{id}` | Partially update a user |
+| DELETE | `/api/users/{id}` | Delete a user |
+| GET | `/api/users/search/name?name={name}` | Search users by name |
+| GET | `/api/users/search/email?email={email}` | Search users by email |
 
 ### Driver APIs
 
-  --------------------------------------------------------------------------------------------------
-Method                  Endpoint                                           Purpose
-  ----------------------- -------------------------------------------------- -----------------------
-POST                    `/api/drivers`                                     Register a driver
-
-GET                     `/api/drivers`                                     Retrieve all drivers
-
-GET                     `/api/drivers/{driverId}`                          Retrieve a driver by ID
-
-PUT                     `/api/drivers/{driverId}`                          Update driver details
-
-PATCH                   `/api/drivers/{driverId}/status?status={status}`   Update driver
-availability
-  --------------------------------------------------------------------------------------------------
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST | `/api/drivers` | Register a driver |
+| GET | `/api/drivers` | Retrieve all drivers |
+| GET | `/api/drivers/{driverId}` | Retrieve a driver by ID |
+| PUT | `/api/drivers/{driverId}` | Update driver details |
+| PATCH | `/api/drivers/{driverId}/status?status={status}` | Update driver availability |
 
 ### Vehicle APIs
 
-  -----------------------------------------------------------------------
-Method                  Endpoint                Purpose
-  ----------------------- ----------------------- -----------------------
-POST                    `/api/vehicles`         Register a vehicle
-
-GET                     `/api/vehicles`         Retrieve all vehicles
-
-GET                     `/api/vehicles/{id}`    Retrieve a vehicle by
-ID
-
-PUT                     `/api/vehicles/{id}`    Update vehicle details
-
-DELETE                  `/api/vehicles/{id}`    Delete a vehicle if it
-is not assigned
-  -----------------------------------------------------------------------
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST | `/api/vehicles` | Register a vehicle |
+| GET | `/api/vehicles` | Retrieve all vehicles |
+| GET | `/api/vehicles/{id}` | Retrieve a vehicle by ID |
+| PUT | `/api/vehicles/{id}` | Update vehicle details |
+| DELETE | `/api/vehicles/{id}` | Delete a vehicle if it is not assigned |
 
 ### Ride APIs
 
-  --------------------------------------------------------------------------------
-Method                  Endpoint                         Purpose
-  ----------------------- -------------------------------- -----------------------
-POST                    `/api/rides`                     Create a ride request
-
-GET                     `/api/rides`                     Retrieve all rides
-
-GET                     `/api/rides/{id}`                Retrieve a ride by ID
-
-GET                     `/api/rides/rider/{riderId}`     Retrieve rides
-belonging to a rider
-
-GET                     `/api/rides/driver/{driverId}`   Retrieve rides assigned
-to a driver
-
-GET                     `/api/rides/status/{status}`     Filter rides by status
-
-PATCH                   `/api/rides/{id}/cancel`         Cancel an eligible ride
-
-PATCH                   `/api/rides/{rideId}/start`      Start an accepted ride
-
-PATCH                   `/api/rides/{rideId}/complete`   Complete a ride in
-progress
-  --------------------------------------------------------------------------------
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST | `/api/rides` | Create a ride request |
+| GET | `/api/rides` | Retrieve all rides |
+| GET | `/api/rides/{id}` | Retrieve a ride by ID |
+| GET | `/api/rides/rider/{riderId}` | Retrieve rides belonging to a rider |
+| GET | `/api/rides/driver/{driverId}` | Retrieve rides assigned to a driver |
+| GET | `/api/rides/status/{status}` | Filter rides by status |
+| PATCH | `/api/rides/{id}/cancel` | Cancel an eligible ride |
+| PATCH | `/api/rides/{rideId}/start` | Start an accepted ride |
+| PATCH | `/api/rides/{rideId}/complete` | Complete a ride in progress |
 
 ### Ride Offer APIs
 
-  ------------------------------------------------------------------------------------------------
-Method                  Endpoint                                         Purpose
-  ----------------------- ------------------------------------------------ -----------------------
-POST                    `/api/rides/{rideId}/offers/{driverId}`          Create a ride offer
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST | `/api/rides/{rideId}/offers/{driverId}` | Create a ride offer |
+| PATCH | `/api/rides/{rideId}/offers/{driverId}/accept` | Accept a pending offer |
+| PATCH | `/api/rides/{rideId}/offers/{driverId}/reject` | Reject a pending offer |
 
-PATCH                   `/api/rides/{rideId}/offers/{driverId}/accept`   Accept a pending offer
-
-PATCH                   `/api/rides/{rideId}/offers/{driverId}/reject`   Reject a pending offer
-------------------------------------------------------------------------------------------------
-
-The dedicated ride-offer endpoints handle driver acceptance and
-rejection. There are no active direct ride accept/reject routes in the
-current `RideController`.
+The dedicated ride-offer endpoints handle driver acceptance and rejection. There are no active direct ride accept/reject routes in the current `RideController`.
 
 ### Utility APIs
 
-  -----------------------------------------------------------------------
-Method                  Endpoint                Purpose
-  ----------------------- ----------------------- -----------------------
-GET                     `/api/health`           Return application
-health status
-
-GET                     `/api/hello`            Return a simple
-application
-availability message
-  -----------------------------------------------------------------------
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/health` | Return application health status |
+| GET | `/api/hello` | Return a simple application availability message |
 
 ## Ride Lifecycle
 
 The `RideStatus` enum contains:
 
--   `REQUESTED`
--   `ACCEPTED`
--   `IN_PROGRESS`
--   `COMPLETED`
--   `CANCELLED`
--   `REJECTED`
+- `REQUESTED`
+- `ACCEPTED`
+- `IN_PROGRESS`
+- `COMPLETED`
+- `CANCELLED`
+- `REJECTED`
 
 ### 1. Ride Creation
 
-A rider creates a ride request with pickup and drop-off locations. The
-service verifies that the rider exists. A new ride begins with
-`REQUESTED` status and receives its request timestamp automatically
-before persistence.
+A rider creates a ride request with pickup and drop-off locations. The service verifies that the rider exists. A new ride begins with `REQUESTED` status and receives its request timestamp automatically before persistence.
 
 ### 2. Ride Offer Creation
 
@@ -296,14 +218,15 @@ Endpoint:
 
 The application checks that:
 
-1.  The ride exists.
-2.  The ride is `REQUESTED` and has no assigned driver.
-3.  The driver exists and is `AVAILABLE`.
-4.  The associated user has the `DRIVER` role.
-5.  An offer for the same ride-driver pair does not already exist.
+1. The ride exists.
+2. The ride is `REQUESTED` and has no assigned driver.
+3. The driver exists and is `AVAILABLE`.
+4. The associated user has the `DRIVER` role.
+5. An offer for the same ride-driver pair does not already exist.
 
-A successful request creates an offer with `PENDING` status and an
-automatically populated creation timestamp.
+A successful request creates an offer with `PENDING` status and an automatically populated creation timestamp.
+
+The application also enforces duplicate prevention at the database level through a unique constraint on `(ride_id, driver_id)`.
 
 ### 3. Accept a Ride Offer
 
@@ -313,21 +236,19 @@ Endpoint:
 
 When a driver accepts a pending offer:
 
-1.  The ride is retrieved with a pessimistic write lock.
-2.  The ride must still be `REQUESTED` and unassigned.
-3.  The offer for that ride-driver pair must exist and be `PENDING`.
-4.  The driver is retrieved with a pessimistic write lock.
-5.  The driver must still be `AVAILABLE`.
-6.  The associated user must have the `DRIVER` role.
-7.  The offer changes to `ACCEPTED`.
-8.  The driver is assigned to the ride.
-9.  The ride changes to `ACCEPTED`.
+1. The ride is retrieved with a pessimistic write lock.
+2. The ride must still be `REQUESTED` and unassigned.
+3. The offer for that ride-driver pair must exist and be `PENDING`.
+4. The driver is retrieved with a pessimistic write lock.
+5. The driver must still be `AVAILABLE`.
+6. The associated user must have the `DRIVER` role.
+7. The offer changes to `ACCEPTED`.
+8. The driver is assigned to the ride.
+9. The ride changes to `ACCEPTED`.
 10. The driver changes to `BUSY`.
 11. Other pending offers for that ride are marked `EXPIRED`.
 
-The related state changes are managed within a transaction. Locking the
-ride and driver rows helps serialize competing operations and prevent
-conflicting assignments.
+The related state changes are managed within a transaction. Locking the ride and driver rows helps serialize competing operations and prevent conflicting assignments.
 
 ### 4. Reject a Ride Offer
 
@@ -337,15 +258,13 @@ Endpoint:
 
 Rejecting a pending offer:
 
--   Changes the offer status to `REJECTED`.
--   Leaves the ride in `REQUESTED` status if it has not been assigned.
--   Does not reject the entire ride request.
--   Does not independently change the driver's availability.
--   Requires the ride to still be accepting driver responses and the
-    associated user to have the `DRIVER` role.
+- Changes the offer status to `REJECTED`.
+- Leaves the ride in `REQUESTED` status if it has not been assigned.
+- Does not reject the entire ride request.
+- Does not independently change the driver's availability.
+- Requires the ride to still be accepting driver responses and the associated user to have the `DRIVER` role.
 
-The driver remains `AVAILABLE` unless another operation changes the
-driver's state.
+The driver remains `AVAILABLE` unless another operation changes the driver's state.
 
 ### 5. Start a Ride
 
@@ -357,8 +276,8 @@ Only a ride in `ACCEPTED` status can be started.
 
 On success:
 
--   The ride status changes to `IN_PROGRESS`.
--   The assigned driver remains `BUSY`.
+- The ride status changes to `IN_PROGRESS`.
+- The assigned driver remains `BUSY`.
 
 Invalid state transitions are rejected.
 
@@ -368,15 +287,13 @@ Endpoint:
 
 `PATCH /api/rides/{rideId}/complete`
 
-Only a ride in `IN_PROGRESS` status with an assigned driver can be
-completed.
+Only a ride in `IN_PROGRESS` status with an assigned driver can be completed.
 
 On success:
 
--   The ride status changes to `COMPLETED`.
--   The driver remains associated with the ride for historical
-    reference.
--   The driver's status changes to `AVAILABLE`.
+- The ride status changes to `COMPLETED`.
+- The driver remains associated with the ride for historical reference.
+- The driver's status changes to `AVAILABLE`.
 
 The ride and driver updates are managed within a transaction.
 
@@ -390,15 +307,13 @@ Cancellation is permitted for rides in `REQUESTED` or `ACCEPTED` status.
 
 On successful cancellation:
 
--   The ride status changes to `CANCELLED`.
--   If a driver was assigned, that driver's status changes back to
-    `AVAILABLE`.
--   All pending offers associated with the ride change to `EXPIRED`.
--   Previously rejected offers remain `REJECTED`.
--   Attempts to cancel rides in other states are rejected.
+- The ride status changes to `CANCELLED`.
+- If a driver was assigned, that driver's status changes back to `AVAILABLE`.
+- All pending offers associated with the ride change to `EXPIRED`.
+- Previously rejected offers remain `REJECTED`.
+- Attempts to cancel rides in other states are rejected.
 
-The ride is retrieved with a pessimistic write lock. Cancellation and
-pending-offer expiration are coordinated within the transaction.
+The ride is retrieved with a pessimistic write lock. Cancellation and pending-offer expiration are coordinated within the transaction.
 
 ## Database Design and Integrity
 
@@ -406,233 +321,180 @@ The project uses PostgreSQL with Spring Data JPA and Hibernate.
 
 ### Core Relationships
 
--   A `Driver` has a one-to-one relationship with a `User`.
--   A `Driver` has a one-to-one relationship with a `Vehicle`.
--   A `Ride` belongs to one rider (`User`).
--   A ride can have zero or one assigned driver.
--   A `RideOffer` belongs to one ride and one driver.
--   A ride can have multiple offers over time, while a driver can
-    receive offers for different rides.
+- A `Driver` has a one-to-one relationship with a `User`.
+- A `Driver` has a one-to-one relationship with a `Vehicle`.
+- A `Ride` belongs to one rider (`User`).
+- A ride can have zero or one assigned driver.
+- A `RideOffer` belongs to one ride and one driver.
+- A ride can have multiple offers over time, while a driver can receive offers for different rides.
 
 ### Driver Constraints
 
 The `drivers` entity mapping defines:
 
--   `user_id`: `NOT NULL` and `UNIQUE`.
--   `vehicle_id`: `NOT NULL` and `UNIQUE`.
--   `license_number`: `NOT NULL` and `UNIQUE`.
--   `status`: `NOT NULL`.
+- `user_id`: `NOT NULL` and `UNIQUE`.
+- `vehicle_id`: `NOT NULL` and `UNIQUE`.
+- `license_number`: `NOT NULL` and `UNIQUE`.
+- `status`: `NOT NULL`.
 
 ### Vehicle and User Constraints
 
--   Vehicle registration number is required and unique.
--   User email and phone are mapped as unique columns.
--   Foreign keys maintain the relationships between drivers, users,
-    vehicles, rides, and ride offers.
+- Vehicle registration number is required and unique.
+- User email and phone are mapped as unique columns.
+- Foreign keys maintain the relationships between drivers, users, vehicles, rides, and ride offers.
 
 ### Ride Indexes
 
-Indexes have been added and verified in the development PostgreSQL
-database for frequently queried ride columns:
+Indexes have been added and verified in the development PostgreSQL database for frequently queried ride columns:
 
--   `rider_id` --- supports rider-specific ride retrieval.
--   `driver_id` --- supports driver-specific ride retrieval.
--   `status` --- supports status-based filtering.
+- `rider_id` — supports rider-specific ride retrieval.
+- `driver_id` — supports driver-specific ride retrieval.
+- `status` — supports status-based filtering.
 
-PostgreSQL uses B-tree indexes by default for ordinary indexes unless
-another index type is specified. Indexes can improve lookups but add
-storage and write overhead.
+PostgreSQL uses B-tree indexes by default for ordinary indexes unless another index type is specified. Indexes can improve lookups but add storage and write overhead.
 
 ### Ride Offer Constraints
 
-The `ride_offers` table mapping defines a named uniqueness constraint on
-`(ride_id, driver_id)` to prevent duplicate offers for the same
-ride-driver pair.
+The `ride_offers` table mapping defines a named uniqueness constraint on `(ride_id, driver_id)` to prevent duplicate offers for the same ride-driver pair.
+
+This is a database-level safeguard in addition to the duplicate check performed by the service layer.
 
 ### Schema Management
 
-Entity annotations describe the intended database mapping. The project
-currently uses Hibernate `ddl-auto=update` for development schema
-updates.
+Entity annotations describe the intended database mapping. The project currently uses Hibernate `ddl-auto=update` for development schema updates.
 
-The driver constraints and ride indexes have also been checked against
-the development PostgreSQL database. Those manual database changes are
-not currently represented as versioned migration scripts. Flyway
-migrations are a planned improvement so schema changes can be reproduced
-consistently across environments.
+The driver constraints and ride indexes have also been checked against the development PostgreSQL database. Those manual database changes are not currently represented as versioned migration scripts. Flyway migrations are a planned improvement so schema changes can be reproduced consistently across environments.
 
 ## Automated Testing
 
-The project uses **JUnit 5, Mockito, Spring MVC Test / MockMvc, Spring
-Boot Test, Testcontainers, and AssertJ**.
+The project uses **JUnit 5, Mockito, Spring MVC Test / MockMvc, Spring Boot Test, Testcontainers, and AssertJ**.
 
-The ZIP's Maven Surefire reports confirm **154 tests passing, with 0
-failures, 0 errors, and 0 skipped**, across **13 test classes**. This
-includes service unit tests, controller MVC-slice tests,
-PostgreSQL-backed integration tests, and an application-context smoke
-test.
+The latest full Maven regression run confirms:
+
+<details>
+<summary>Test suite results</summary>
+
+| Metric | Result |
+|---|---:|
+| Test classes | 13 |
+| Total test methods | **156** |
+| Passed | **156** |
+| Failures | 0 |
+| Errors | 0 |
+| Skipped | 0 |
+
+</details>
 
 ### Test Classes
 
-  ------------------------------------------------------------------------------------
-Test Class                                        Test Methods Focus
-  --------------------------------- ---------------------------- ---------------------
-`UserServiceTest`                                           26 User business logic,
-validation, and
-duplicate checks
-
-`UserControllerTest`                                        14 User API request and
-response behavior
-
-`VehicleServiceTest`                                        13 Vehicle business
-logic and constraints
-
-`VehicleControllerTest`                                      5 Vehicle API behavior
-
-`DriverServiceTest`                                         15 Driver registration,
-retrieval, updates,
-and assignment rules
-
-`DriverControllerTest`                                      10 Driver API request
-and response behavior
-
-`RideServiceTest`                                           24 Ride creation,
-retrieval,
-cancellation, start,
-and completion
-
-`RideControllerTest`                                        10 Ride API behavior
-
-`RideOfferServiceTest`                                      29 Offer creation,
-acceptance,
-rejection,
-expiration, and
-validation rules
-
-`RideOfferControllerTest`                                    3 Ride-offer API
-behavior
-
-`RideRepositoryIntegrationTest`                              1 PostgreSQL
-persistence, rider
-relationship, and
-ride timestamp
-
-`RideWorkflowIntegrationTest`                                3 PostgreSQL-backed
-offer workflow, ride
-lifecycle, and
-concurrent acceptance
-
-`RidesharingApplicationTests`                                1 Spring application
-context startup with
-PostgreSQL
-Testcontainers
-
-**Total**                                              **154**
-------------------------------------------------------------------------------------
+| Test Class | Test Methods | Coverage |
+|---|---:|---|
+| `UserServiceTest` | 26 | User business logic, validation, and duplicate checks |
+| `UserControllerTest` | 14 | User API request and response behavior |
+| `VehicleServiceTest` | 13 | Vehicle business logic and constraints |
+| `VehicleControllerTest` | 5 | Vehicle API behavior |
+| `DriverServiceTest` | 15 | Driver registration, retrieval, updates, and assignment rules |
+| `DriverControllerTest` | 10 | Driver API request and response behavior |
+| `RideServiceTest` | 24 | Ride creation, retrieval, cancellation, start, and completion |
+| `RideControllerTest` | 10 | Ride API behavior |
+| `RideOfferServiceTest` | 29 | Offer creation, acceptance, rejection, expiration, and validation rules |
+| `RideOfferControllerTest` | 3 | Ride-offer API behavior |
+| `RideRepositoryIntegrationTest` | 1 | PostgreSQL persistence, rider relationship, and ride timestamp |
+| `RideWorkflowIntegrationTest` | 5 | PostgreSQL-backed offer workflow, ride lifecycle, and concurrency scenarios |
+| `RidesharingApplicationTests` | 1 | Spring application context startup with PostgreSQL Testcontainers |
+| **Total** | **156** | **13 test classes** |
 
 ### Testing Layers
 
--   **Service unit tests:** Mockito isolates service logic and verifies
-    business rules, validation, and error scenarios.
--   **Controller tests:** `@WebMvcTest` and MockMvc exercise HTTP-layer
-    behavior without starting the full application.
--   **Repository integration test:** `@DataJpaTest` runs against a real
-    PostgreSQL container and verifies persistence, entity relationships,
-    and the ride creation timestamp.
--   **Workflow integration tests:** `@SpringBootTest` runs service
-    workflows against PostgreSQL through Testcontainers.
--   **Concurrency integration test:** Two separate threads attempt to
-    accept different offers for the same ride. The test verifies that
-    exactly one driver succeeds, the winning offer is accepted, the
-    competing offer expires, and driver availability is consistent.
--   **Application context test:** Starts the Spring application context
-    using a PostgreSQL Testcontainers database.
+- **Service unit tests:** Mockito isolates service logic and verifies business rules, validation, and error scenarios.
+- **Controller tests:** `@WebMvcTest` and MockMvc exercise HTTP-layer behavior without starting the full application.
+- **Repository integration test:** `@DataJpaTest` runs against a real PostgreSQL container and verifies persistence, entity relationships, and the ride creation timestamp.
+- **Workflow integration tests:** `@SpringBootTest` runs service workflows against PostgreSQL through Testcontainers.
+- **Concurrency integration tests:** Separate threads attempt competing operations against the same ride. The tests verify that only one driver can accept a ride and that concurrent duplicate offer creation does not produce duplicate offers.
+- **Database constraint test:** Attempts to insert duplicate ride-driver offers directly and verifies that PostgreSQL rejects the duplicate.
+- **Application context test:** Starts the Spring application context using a PostgreSQL Testcontainers database.
 
 ### Important Tested Scenarios
 
--   Successful and invalid user, vehicle, and driver operations.
--   Missing-resource handling and duplicate-resource conflicts.
--   Request validation and controller response behavior.
--   Ride creation, retrieval, cancellation, start, and completion.
--   Rejection of invalid ride lifecycle transitions.
--   Ride-offer creation, duplicate-offer prevention at the service
-    layer, acceptance, rejection, and expiration.
--   Driver availability and role validation during offer operations.
--   Driver availability updates when a ride is accepted, cancelled, or
-    completed.
--   Persistence of rides and their rider relationship in PostgreSQL.
--   Complete ride lifecycle and offer-expiration behavior against
-    PostgreSQL.
--   Competing offer acceptance attempts against the same ride using
-    concurrent threads.
+- Successful and invalid user, vehicle, and driver operations.
+- Missing-resource handling and duplicate-resource conflicts.
+- Request validation and controller response behavior.
+- Ride creation, retrieval, cancellation, start, and completion.
+- Rejection of invalid ride lifecycle transitions.
+- Ride-offer creation, duplicate-offer prevention at the service layer, acceptance, rejection, and expiration.
+- Driver availability and role validation during offer operations.
+- Driver availability updates when a ride is accepted, cancelled, or completed.
+- Persistence of rides and their rider relationship in PostgreSQL.
+- Complete ride lifecycle and offer-expiration behavior against PostgreSQL.
+- Competing offer acceptance attempts against the same ride using concurrent threads.
+- Concurrent attempts to create duplicate offers for the same ride-driver pair.
+- Database-level duplicate offer rejection through the PostgreSQL unique constraint.
 
-The PostgreSQL-backed tests use **Testcontainers** with the
-`postgres:16-alpine` image. Docker must be running when executing the
-full test suite. The workflow integration tests call the service layer
-directly; they are not full HTTP end-to-end tests.
+The PostgreSQL-backed tests use **Testcontainers** with the `postgres:16-alpine` image. Docker must be running when executing the full test suite.
+
+The workflow integration tests invoke the service layer directly. They are PostgreSQL-backed integration tests, not full HTTP-level end-to-end tests.
 
 ### Running Tests
 
 Run the complete test suite:
 
-``` bash
+```bash
 mvn clean test
 ```
 
 Run a specific test class:
 
-``` bash
+```bash
 mvn -Dtest=RideOfferServiceTest test
+```
+
+Run the workflow integration tests:
+
+```bash
+mvn -Dtest=RideWorkflowIntegrationTest test
 ```
 
 Run an individual test method:
 
-``` bash
+```bash
 mvn -Dtest=RideOfferServiceTest#rejectOffer_shouldThrowException_whenOfferIsAlreadyProcessed test
 ```
 
-**Note:** The Testcontainers integration and application-context tests
-require a working Docker environment.
+**Note:** Testcontainers integration and application-context tests require a working Docker environment.
 
 ## Architecture
 
 The project follows a **layered monolithic architecture**.
 
-``` text
+```text
 Client / Postman / Swagger UI
-             |
-             v
-        Controller
-             |
-             v
-          Service
-             |
-             v
-        Repository
-             |
-             v
-         PostgreSQL
+            |
+            v
+       Controller
+            |
+            v
+         Service
+            |
+            v
+       Repository
+            |
+            v
+        PostgreSQL
 ```
 
 ### Layer Responsibilities
 
--   **Controller:** Handles HTTP requests, path variables, query
-    parameters, request data, and response status codes.
--   **Service:** Implements business rules, validates state transitions,
-    coordinates operations, and manages transactions.
--   **Repository:** Provides database access through Spring Data JPA.
--   **Entity:** Represents persistent domain objects and relational
-    mappings.
--   **DTO:** Controls the data accepted by API requests and exposed
-    through API responses.
--   **Global exception handler:** Converts application exceptions into
-    structured HTTP error responses.
--   **OpenAPI configuration:** Provides API metadata for generated
-    documentation.
+- **Controller:** Handles HTTP requests, path variables, query parameters, request data, and response status codes.
+- **Service:** Implements business rules, validates state transitions, coordinates operations, and manages transactions.
+- **Repository:** Provides database access through Spring Data JPA.
+- **Entity:** Represents persistent domain objects and relational mappings.
+- **DTO:** Controls the data accepted by API requests and exposed through API responses.
+- **Global exception handler:** Converts application exceptions into structured HTTP error responses.
+- **OpenAPI configuration:** Provides API metadata for generated documentation.
 
 ### Domain Model
 
-``` text
+```text
 User
  ├── Role: RIDER
  └── Role: DRIVER
@@ -653,179 +515,145 @@ User (Rider)
            └── Offer Status
 ```
 
--   `User` represents a person using the platform.
--   `Driver` contains driver-specific details, including license
-    information and availability.
--   `Vehicle` stores vehicle details and is associated with a driver.
--   `Ride` represents a booking request associated with a rider and,
-    optionally, an assigned driver.
--   `RideOffer` represents an offer sent to a driver for a particular
-    ride.
+- `User` represents a person using the platform.
+- `Driver` contains driver-specific details, including license information and availability.
+- `Vehicle` stores vehicle details and is associated with a driver.
+- `Ride` represents a booking request associated with a rider and, optionally, an assigned driver.
+- `RideOffer` represents an offer sent to a driver for a particular ride.
 
-The project is currently a **monolithic application, not a microservices
-architecture**. Microservices, API Gateway, and service discovery are
-future architectural considerations rather than existing features.
+The project is currently a **monolithic application, not a microservices architecture**. Microservices, API Gateway, and service discovery are future architectural considerations rather than existing features.
 
 ## Project Status
 
-**Status: Core user, driver, vehicle, ride, and ride-offer workflows
-implemented. The current test suite contains 154 tests across 13
-classes, and the included Maven Surefire reports show all 154 passing.
-PostgreSQL integration testing and concurrent ride-offer acceptance
-testing are implemented.**
+**Status: Core user, driver, vehicle, ride, and ride-offer workflows are implemented. The project has 156 passing automated tests across 13 test classes, including PostgreSQL-backed integration tests, database constraint verification, and concurrent ride-offer scenarios.**
 
 ### Implemented
 
--   User create, read, update, partial update, and delete operations.
--   User search by name and email.
--   User pagination and sorting.
--   DTO-based request and response handling.
--   Request validation and global exception handling.
--   Application-level and database-level uniqueness checks for user
-    email and phone.
--   User, driver, vehicle, ride, and ride-offer domain models.
--   PostgreSQL persistence and entity relationships.
--   Driver registration, retrieval, update, and status update APIs.
--   Vehicle create, retrieve, update, and delete APIs.
--   Vehicle assignment protection and prevention of deleting an assigned
-    vehicle.
--   Ride creation and retrieval.
--   Ride filtering by rider, driver, and status.
--   Dedicated ride-offer creation, acceptance, and rejection.
--   Duplicate ride-offer protection through service validation and a
-    database uniqueness constraint.
--   Ride cancellation, start, and completion.
--   Pending-offer expiration on ride cancellation and competing-offer
-    expiration on acceptance.
--   Driver assignment and availability updates throughout the ride
-    lifecycle.
--   Transaction-managed business operations.
--   Pessimistic write locking for the ride and driver records during
-    offer creation, acceptance, and rejection; ride locking is also used
-    during cancellation.
--   Database constraints and ride indexes in the development database.
--   Swagger / OpenAPI integration.
--   Manual Postman verification of core workflows.
--   PostgreSQL integration tests using Testcontainers.
--   A concurrent integration test verifying that only one of two
-    competing drivers can accept the same ride.
--   JUnit 5, Mockito, MockMvc, and Testcontainers test suites with 154
-    passing test methods across 13 classes in the supplied test reports.
--   Git-based incremental development and GitHub commits.
+- User create, read, update, partial update, and delete operations.
+- User search by name and email.
+- User pagination and sorting.
+- DTO-based request and response handling.
+- Request validation and global exception handling.
+- Application-level and database-level uniqueness checks for user email and phone.
+- User, driver, vehicle, ride, and ride-offer domain models.
+- PostgreSQL persistence and entity relationships.
+- Driver registration, retrieval, update, and status update APIs.
+- Vehicle create, retrieve, update, and delete APIs.
+- Vehicle assignment protection and prevention of deleting an assigned vehicle.
+- Ride creation and retrieval.
+- Ride filtering by rider, driver, and status.
+- Dedicated ride-offer creation, acceptance, and rejection.
+- Duplicate ride-offer protection through service validation and a database uniqueness constraint.
+- Ride cancellation, start, and completion.
+- Pending-offer expiration on ride cancellation and competing-offer expiration on acceptance.
+- Driver assignment and availability updates throughout the ride lifecycle.
+- Transaction-managed business operations.
+- Pessimistic write locking for ride and driver records during offer operations; ride locking is also used during cancellation.
+- Database constraints and ride indexes in the development database.
+- Swagger / OpenAPI integration.
+- Manual Postman verification of core workflows.
+- PostgreSQL integration tests using Testcontainers.
+- Database-level duplicate ride-offer constraint verification.
+- Concurrent integration tests for competing ride acceptance and duplicate offer creation.
+- JUnit 5, Mockito, MockMvc, and Testcontainers test suites with 156 passing test methods across 13 classes.
+- Git-based incremental development and GitHub commits.
 
 ### In Progress
 
--   Expanding PostgreSQL integration coverage for database constraints
-    and persistence edge cases.
--   Adding an integration test for concurrent duplicate offer creation.
--   Reviewing consistency of transaction and locking behavior across all
-    ride state transitions.
--   Improving request validation consistency across all controllers.
--   Adding full HTTP-level end-to-end tests for complete API workflows.
+- Reviewing consistency of transaction and locking behavior across all ride state transitions.
+- Improving request validation consistency across all controllers.
+- Adding full HTTP-level end-to-end tests for complete API workflows.
+- Expanding integration coverage for additional database and transaction edge cases.
 
 ### Planned Improvements
 
 #### 1. Backend Quality and Testing
 
--   Add integration tests that verify database uniqueness constraints
-    directly.
--   Test simultaneous duplicate offer creation using concurrent
-    requests.
--   Add HTTP-level end-to-end ride and offer lifecycle tests.
--   Review transaction boundaries and driver availability consistency
-    across ride operations.
--   Add Flyway database migrations.
--   Review API response and error-response consistency.
--   Continue adding edge-case tests as business rules evolve.
+- Add HTTP-level end-to-end ride and offer lifecycle tests.
+- Review transaction boundaries and driver availability consistency across ride operations.
+- Add Flyway database migrations.
+- Review API response and error-response consistency.
+- Continue adding edge-case tests as business rules evolve.
 
 #### 2. Security and Authentication
 
--   Spring Security.
--   JWT-based authentication.
--   Role-based authorization for riders and drivers.
--   Authorization checks so users can perform only permitted ride
-    operations.
--   Secure database credentials and environment-specific configuration.
+- Spring Security.
+- JWT-based authentication.
+- Role-based authorization for riders and drivers.
+- Authorization checks so users can perform only permitted ride operations.
+- Secure database credentials and environment-specific configuration.
 
 #### 3. Additional Features
 
--   Fare calculation.
--   Ride history and richer filtering.
--   Driver discovery and retrieval by availability.
--   More complete driver availability management rules.
--   Offer expiry based on a configurable timeout and scheduled
-    processing.
--   Additional ride and driver business rules as the workflow evolves.
+- Fare calculation.
+- Ride history and richer filtering.
+- Driver discovery and retrieval by availability.
+- More complete driver availability management rules.
+- Offer expiry based on a configurable timeout and scheduled processing.
+- Additional ride and driver business rules as the workflow evolves.
 
 #### 4. Performance and Deployment
 
--   Redis caching where justified by measured access patterns.
--   Docker containerization of the application and database.
--   CI/CD pipeline.
--   Cloud deployment.
--   Centralized logging and monitoring.
--   API Gateway and service discovery only if the system evolves toward
-    microservices.
+- Redis caching where justified by measured access patterns.
+- Docker containerization of the application and database.
+- CI/CD pipeline.
+- Cloud deployment.
+- Centralized logging and monitoring.
+- API Gateway and service discovery only if the system evolves toward microservices.
 
 ## Running Locally
 
 ### Prerequisites
 
--   Java 21 or a compatible configured JDK.
--   Maven.
--   PostgreSQL.
--   Docker Desktop or another Docker-compatible runtime (required for
-    Testcontainers-based tests).
+- Java 21 or a compatible configured JDK.
+- Maven.
+- PostgreSQL.
+- Docker Desktop or another Docker-compatible runtime (required for Testcontainers-based tests).
 
 ### 1. Clone the Repository
 
-``` bash
+```bash
 git clone https://github.com/Preyansh13/rideshare-backend.git
 cd rideshare-backend
 ```
 
 ### 2. Configure PostgreSQL
 
-Create a PostgreSQL database named `rideshare`, or update the datasource
-configuration to match your local database.
+Create a PostgreSQL database named `rideshare`, or update the datasource configuration to match your local database.
 
-The checked-in `application.properties` expects the following datasource
-settings:
+The application expects these datasource settings:
 
-``` properties
+```properties
 spring.datasource.url=jdbc:postgresql://localhost:5432/rideshare
 spring.datasource.username=${DB_USERNAME}
 spring.datasource.password=${DB_PASSWORD}
 ```
 
-Do not commit database passwords, API keys, or other secrets. Keep local
-credentials outside version control.
+Do not commit database passwords, API keys, or other secrets. Keep local credentials outside version control.
 
 ### 3. Configure Database Credentials
 
-The application expects the `DB_USERNAME` and `DB_PASSWORD` environment
-variables. Set them before starting the application.
+The application expects the `DB_USERNAME` and `DB_PASSWORD` environment variables. Set them before starting the application.
 
 On Windows PowerShell:
 
-``` powershell
+```powershell
 $env:DB_USERNAME="postgres"
 $env:DB_PASSWORD="your_password"
 ```
 
 On macOS / Linux:
 
-``` bash
+```bash
 export DB_USERNAME=postgres
 export DB_PASSWORD=your_password
 ```
 
-Use the username and password configured for your local PostgreSQL
-instance.
+Use the username and password configured for your local PostgreSQL instance.
 
 ### 4. Start the Application
 
-``` bash
+```bash
 mvn spring-boot:run
 ```
 
@@ -841,18 +669,17 @@ The generated OpenAPI document is commonly available at:
 
 ### 6. Check Application Health
 
-``` http
+```http
 GET http://localhost:8080/api/health
 ```
 
 ### 7. Test the APIs
 
-Use Postman or Swagger UI to send requests to the locally running
-application, typically at `http://localhost:8080`.
+Use Postman or Swagger UI to send requests to the locally running application, typically at `http://localhost:8080`.
 
 Example requests:
 
-``` http
+```http
 GET    /api/users?page=0&size=10
 GET    /api/users/search/name?name=Rahul
 GET    /api/users/search/email?email=example%40mail.com
@@ -874,28 +701,27 @@ PATCH  /api/rides/4/complete
 PATCH  /api/rides/8/cancel
 ```
 
-These examples illustrate endpoint formats. Use IDs and states that
-exist in your own database. A ride offer must be pending to be accepted
-or rejected, and a ride must be accepted before it can be started.
+These examples illustrate endpoint formats. Use IDs and states that exist in your own database. A ride offer must be pending to be accepted or rejected, and a ride must be accepted before it can be started.
 
 ## Learning Objectives
 
-This project is designed to strengthen practical backend engineering
-skills, including:
+This project is designed to strengthen practical backend engineering skills, including:
 
--   Java and object-oriented programming.
--   Spring Boot REST API development.
--   Layered architecture and separation of concerns.
--   Spring Data JPA and Hibernate.
--   PostgreSQL relationships, constraints, and indexing.
--   DTOs, validation, and exception handling.
--   Transaction management and JPA dirty checking.
--   State machines and business-rule validation.
--   Ride assignment and driver availability management.
--   Ride-offer lifecycle modeling.
--   Pessimistic database locking and concurrency fundamentals.
--   Unit and MVC-slice testing with JUnit 5, Mockito, and MockMvc.
--   PostgreSQL integration testing with Testcontainers.
--   API testing, debugging, and error handling.
--   Git-based incremental development.
--   Backend integration testing and system design fundamentals.
+- Java and object-oriented programming.
+- Spring Boot REST API development.
+- Layered architecture and separation of concerns.
+- Spring Data JPA and Hibernate.
+- PostgreSQL relationships, constraints, and indexing.
+- DTOs, validation, and exception handling.
+- Transaction management and JPA dirty checking.
+- State machines and business-rule validation.
+- Ride assignment and driver availability management.
+- Ride-offer lifecycle modeling.
+- Pessimistic database locking and concurrency fundamentals.
+- Unit and MVC-slice testing with JUnit 5, Mockito, and MockMvc.
+- PostgreSQL integration testing with Testcontainers.
+- Database constraint testing.
+- Concurrent workflow testing.
+- API testing, debugging, and error handling.
+- Git-based incremental development.
+- Backend integration testing and system design fundamentals.
