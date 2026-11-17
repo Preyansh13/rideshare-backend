@@ -459,6 +459,34 @@ class RideOfferServiceTest {
     }
 
     @Test
+    void acceptOffer_shouldThrowException_whenDriverIsOffline() {
+        // Arrange: Return a requested ride.
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(ride));
+
+        // Return an existing pending offer.
+        when(rideOfferRepository.findByRide_IdAndDriver_Id(1L, 1L))
+                .thenReturn(Optional.of(rideOffer));
+
+        // Make the driver offline.
+        driver.setStatus(DriverStatus.OFFLINE);
+
+        when(driverRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(driver));
+
+        // Act & Assert: An offline driver cannot accept the offer.
+        assertThrows(
+                InvalidDriverStatusException.class,
+                () -> rideOfferService.acceptOffer(1L, 1L)
+        );
+
+        // Verify that no ride or offer assignment was persisted.
+        verify(rideRepository, never()).save(any(Ride.class));
+        verify(rideOfferRepository, never()).save(any(RideOffer.class));
+        verify(driverRepository, never()).save(any(Driver.class));
+    }
+
+    @Test
     void acceptOffer_shouldThrowException_whenUserIsNotDriver() {
         // Arrange: Keep the ride and offer valid.
         ride.setStatus(RideStatus.REQUESTED);
@@ -576,6 +604,28 @@ class RideOfferServiceTest {
 
         verifyNoInteractions(driverRepository, rideOfferRepository);
     }
+
+    @Test
+    void createOffer_shouldThrowException_whenDriverIsOffline() {
+        // Arrange: Return an existing requested ride.
+        when(rideRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(ride));
+        // Make the driver offline.
+        driver.setStatus(DriverStatus.OFFLINE);
+
+        when(driverRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(driver));
+
+        // Act & Assert: An offline driver must not receive an offer.
+        assertThrows(
+                InvalidDriverStatusException.class,
+                () -> rideOfferService.createOffer(1L, 1L)
+        );
+
+        // Verify that no offer was saved.
+        verify(rideOfferRepository, never()).save(any(RideOffer.class));
+    }
+
 
     @Test
     void rejectOffer_shouldThrowException_whenRideIsNotRequested() {
