@@ -2,7 +2,7 @@
 
 A ride-sharing backend built with **Java 21, Spring Boot, Spring Data JPA, and PostgreSQL**. The project follows a layered monolithic architecture and implements user, driver, vehicle, ride lifecycle, and ride-offer management.
 
-The goal is to demonstrate practical backend engineering concepts, including REST API design, relational database modeling, validation, transaction management, pessimistic database locking, concurrency control, business-rule enforcement, automated testing, PostgreSQL integration testing, and Git-based development.
+The goal is to demonstrate practical backend engineering concepts, including REST API design, relational database modeling, validation, transaction management, pessimistic database locking, concurrency control, business-rule enforcement, automated testing, PostgreSQL integration testing, HTTP-level workflow testing, and Git-based development.
 
 ## Tech Stack
 
@@ -376,9 +376,9 @@ The latest full Maven regression run confirms:
 
 | Metric | Result |
 |---|---:|
-| Test classes | 13 |
-| Total test methods | **156** |
-| Passed | **156** |
+| Test classes | 14 |
+| Total test methods | **157** |
+| Passed | **157** |
 | Failures | 0 |
 | Errors | 0 |
 | Skipped | 0 |
@@ -401,8 +401,9 @@ The latest full Maven regression run confirms:
 | `RideOfferControllerTest` | 3 | Ride-offer API behavior |
 | `RideRepositoryIntegrationTest` | 1 | PostgreSQL persistence, rider relationship, and ride timestamp |
 | `RideWorkflowIntegrationTest` | 5 | PostgreSQL-backed offer workflow, ride lifecycle, and concurrency scenarios |
+| `RideWorkflowHttpIntegrationTest` | 1 | HTTP-level ride lifecycle using MockMvc and PostgreSQL Testcontainers |
 | `RidesharingApplicationTests` | 1 | Spring application context startup with PostgreSQL Testcontainers |
-| **Total** | **156** | **13 test classes** |
+| **Total** | **157** | **14 test classes** |
 
 ### Testing Layers
 
@@ -410,6 +411,7 @@ The latest full Maven regression run confirms:
 - **Controller tests:** `@WebMvcTest` and MockMvc exercise HTTP-layer behavior without starting the full application.
 - **Repository integration test:** `@DataJpaTest` runs against a real PostgreSQL container and verifies persistence, entity relationships, and the ride creation timestamp.
 - **Workflow integration tests:** `@SpringBootTest` runs service workflows against PostgreSQL through Testcontainers.
+- **HTTP-level integration test:** `@SpringBootTest` with `@AutoConfigureMockMvc` exercises actual application HTTP endpoints against a PostgreSQL Testcontainers database. It verifies the complete ride lifecycle, from ride creation and offer creation through offer acceptance, ride start, and ride completion.
 - **Concurrency integration tests:** Separate threads attempt competing operations against the same ride. The tests verify that only one driver can accept a ride and that concurrent duplicate offer creation does not produce duplicate offers.
 - **Database constraint test:** Attempts to insert duplicate ride-driver offers directly and verifies that PostgreSQL rejects the duplicate.
 - **Application context test:** Starts the Spring application context using a PostgreSQL Testcontainers database.
@@ -426,13 +428,16 @@ The latest full Maven regression run confirms:
 - Driver availability updates when a ride is accepted, cancelled, or completed.
 - Persistence of rides and their rider relationship in PostgreSQL.
 - Complete ride lifecycle and offer-expiration behavior against PostgreSQL.
+- HTTP-level ride lifecycle through actual MockMvc requests.
+- Verification of HTTP response statuses and response bodies during the ride workflow.
+- Verification of persisted ride, offer, and driver states after HTTP operations.
 - Competing offer acceptance attempts against the same ride using concurrent threads.
 - Concurrent attempts to create duplicate offers for the same ride-driver pair.
 - Database-level duplicate offer rejection through the PostgreSQL unique constraint.
 
 The PostgreSQL-backed tests use **Testcontainers** with the `postgres:16-alpine` image. Docker must be running when executing the full test suite.
 
-The workflow integration tests invoke the service layer directly. They are PostgreSQL-backed integration tests, not full HTTP-level end-to-end tests.
+The service-level workflow integration tests invoke the service layer directly. The separate HTTP workflow integration test exercises the application's HTTP endpoints using MockMvc.
 
 ### Running Tests
 
@@ -448,10 +453,16 @@ Run a specific test class:
 mvn -Dtest=RideOfferServiceTest test
 ```
 
-Run the workflow integration tests:
+Run the service-level workflow integration tests:
 
 ```bash
 mvn -Dtest=RideWorkflowIntegrationTest test
+```
+
+Run the HTTP-level workflow integration test:
+
+```bash
+mvn -Dtest=RideWorkflowHttpIntegrationTest test
 ```
 
 Run an individual test method:
@@ -468,18 +479,18 @@ The project follows a **layered monolithic architecture**.
 
 ```text
 Client / Postman / Swagger UI
-            |
-            v
-       Controller
-            |
-            v
-         Service
-            |
-            v
-       Repository
-            |
-            v
-        PostgreSQL
+           |
+           v
+      Controller
+           |
+           v
+        Service
+           |
+           v
+      Repository
+           |
+           v
+       PostgreSQL
 ```
 
 ### Layer Responsibilities
@@ -525,7 +536,7 @@ The project is currently a **monolithic application, not a microservices archite
 
 ## Project Status
 
-**Status: Core user, driver, vehicle, ride, and ride-offer workflows are implemented. The project has 156 passing automated tests across 13 test classes, including PostgreSQL-backed integration tests, database constraint verification, and concurrent ride-offer scenarios.**
+**Status: Core user, driver, vehicle, ride, and ride-offer workflows are implemented. The project has 157 passing automated tests across 14 test classes, including PostgreSQL-backed integration tests, database constraint verification, concurrent ride-offer scenarios, and HTTP-level ride lifecycle integration testing.**
 
 ### Implemented
 
@@ -555,24 +566,24 @@ The project is currently a **monolithic application, not a microservices archite
 - PostgreSQL integration tests using Testcontainers.
 - Database-level duplicate ride-offer constraint verification.
 - Concurrent integration tests for competing ride acceptance and duplicate offer creation.
-- JUnit 5, Mockito, MockMvc, and Testcontainers test suites with 156 passing test methods across 13 classes.
+- HTTP-level ride lifecycle integration testing using MockMvc and PostgreSQL Testcontainers.
+- JUnit 5, Mockito, MockMvc, and Testcontainers test suites with 157 passing test methods across 14 classes.
 - Git-based incremental development and GitHub commits.
 
 ### In Progress
 
 - Reviewing consistency of transaction and locking behavior across all ride state transitions.
 - Improving request validation consistency across all controllers.
-- Adding full HTTP-level end-to-end tests for complete API workflows.
 - Expanding integration coverage for additional database and transaction edge cases.
 
 ### Planned Improvements
 
 #### 1. Backend Quality and Testing
 
-- Add HTTP-level end-to-end ride and offer lifecycle tests.
 - Review transaction boundaries and driver availability consistency across ride operations.
 - Add Flyway database migrations.
 - Review API response and error-response consistency.
+- Add more integration tests for database and transaction edge cases.
 - Continue adding edge-case tests as business rules evolve.
 
 #### 2. Security and Authentication
@@ -720,6 +731,7 @@ This project is designed to strengthen practical backend engineering skills, inc
 - Pessimistic database locking and concurrency fundamentals.
 - Unit and MVC-slice testing with JUnit 5, Mockito, and MockMvc.
 - PostgreSQL integration testing with Testcontainers.
+- HTTP-level integration testing of REST workflows.
 - Database constraint testing.
 - Concurrent workflow testing.
 - API testing, debugging, and error handling.
