@@ -77,7 +77,8 @@ The goal is to demonstrate practical backend engineering concepts, including RES
 - Validate ride status transitions and driver availability.
 - Transaction-managed ride and driver state changes.
 - DTO-based ride responses, including a nullable driver ID before assignment.
-- Pessimistic write locking for ride operations involved in offer creation, acceptance, rejection, and cancellation.
+- Pessimistic write locking for ride state transitions involving cancellation, starting, and completion.
+- Pessimistic write locking for assigned driver updates during cancellation and completion.
 
 ### 5. Ride Offer Management
 
@@ -274,10 +275,14 @@ Endpoint:
 
 Only a ride in `ACCEPTED` status can be started.
 
+The service retrieves the ride using a pessimistic write lock before validating its state and changing it to `IN_PROGRESS`.
+
 On success:
 
 - The ride status changes to `IN_PROGRESS`.
 - The assigned driver remains `BUSY`.
+
+The ride status update is managed within a transaction. JPA dirty checking persists the managed entity's state change.
 
 Invalid state transitions are rejected.
 
@@ -289,13 +294,18 @@ Endpoint:
 
 Only a ride in `IN_PROGRESS` status with an assigned driver can be completed.
 
-On success:
+The service:
 
-- The ride status changes to `COMPLETED`.
-- The driver remains associated with the ride for historical reference.
-- The driver's status changes to `AVAILABLE`.
+1. Retrieves the ride using a pessimistic write lock.
+2. Validates that the ride is `IN_PROGRESS` and has an assigned driver.
+3. Retrieves the assigned driver using a pessimistic write lock.
+4. Changes the ride status to `COMPLETED`.
+5. Changes the driver's status to `AVAILABLE`.
+6. Persists the related state changes within a transaction.
 
-The ride and driver updates are managed within a transaction.
+The driver remains associated with the ride for historical reference.
+
+Locking both records helps coordinate concurrent state changes and maintain ride-driver availability consistency.
 
 ### 7. Cancel a Ride
 
@@ -305,6 +315,15 @@ Endpoint:
 
 Cancellation is permitted for rides in `REQUESTED` or `ACCEPTED` status.
 
+The service:
+
+1. Retrieves the ride using a pessimistic write lock.
+2. Validates that the ride can be cancelled.
+3. If a driver is assigned, retrieves that driver using a pessimistic write lock.
+4. Restores the assigned driver's status to `AVAILABLE`.
+5. Changes the ride status to `CANCELLED`.
+6. Expires all pending offers associated with the ride.
+
 On successful cancellation:
 
 - The ride status changes to `CANCELLED`.
@@ -313,7 +332,7 @@ On successful cancellation:
 - Previously rejected offers remain `REJECTED`.
 - Attempts to cancel rides in other states are rejected.
 
-The ride is retrieved with a pessimistic write lock. Cancellation and pending-offer expiration are coordinated within the transaction.
+Cancellation and pending-offer expiration are coordinated within the transaction.
 
 ## Database Design and Integrity
 
@@ -559,7 +578,9 @@ The project is currently a **monolithic application, not a microservices archite
 - Pending-offer expiration on ride cancellation and competing-offer expiration on acceptance.
 - Driver assignment and availability updates throughout the ride lifecycle.
 - Transaction-managed business operations.
-- Pessimistic write locking for ride and driver records during offer operations; ride locking is also used during cancellation.
+- Pessimistic write locking for ride and driver records during ride-offer operations.
+- Pessimistic write locking for ride cancellation, ride start, and ride completion.
+- Pessimistic write locking for assigned driver updates during cancellation and completion.
 - Database constraints and ride indexes in the development database.
 - Swagger / OpenAPI integration.
 - Manual Postman verification of core workflows.
@@ -572,7 +593,8 @@ The project is currently a **monolithic application, not a microservices archite
 
 ### In Progress
 
-- Reviewing consistency of transaction and locking behavior across all ride state transitions.
+- Reviewing consistency of transaction boundaries and pessimistic locking across ride and ride-offer operations.
+- Reviewing driver availability consistency across ride state transitions.
 - Improving request validation consistency across all controllers.
 - Expanding integration coverage for additional database and transaction edge cases.
 
@@ -580,7 +602,7 @@ The project is currently a **monolithic application, not a microservices archite
 
 #### 1. Backend Quality and Testing
 
-- Review transaction boundaries and driver availability consistency across ride operations.
+- Complete the review of transaction boundaries and driver availability consistency across ride operations.
 - Add Flyway database migrations.
 - Review API response and error-response consistency.
 - Add more integration tests for database and transaction edge cases.
