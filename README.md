@@ -1,8 +1,8 @@
 # RideShare Backend
 
-A ride-sharing backend built with **Java 21, Spring Boot, Spring Data JPA, and PostgreSQL**. The project follows a layered monolithic architecture and implements user, driver, vehicle, ride lifecycle, and ride-offer management.
+A ride-sharing backend built with **Java 21, Spring Boot, Spring Data JPA, Flyway, and PostgreSQL**. The project follows a layered monolithic architecture and implements user, driver, vehicle, ride lifecycle, and ride-offer management.
 
-The goal is to demonstrate practical backend engineering concepts, including REST API design, relational database modeling, validation, transaction management, pessimistic database locking, concurrency control, business-rule enforcement, automated testing, PostgreSQL integration testing, HTTP-level workflow testing, and Git-based development.
+The goal is to demonstrate practical backend engineering concepts, including REST API design, relational database modeling, validation, transaction management, pessimistic database locking, concurrency control, database migrations, business-rule enforcement, automated testing, PostgreSQL integration testing, HTTP-level workflow testing, and Git-based development.
 
 ## Tech Stack
 
@@ -12,6 +12,7 @@ The goal is to demonstrate practical backend engineering concepts, including RES
 | Framework | Spring Boot 4.1.1 |
 | Persistence | Spring Data JPA / Hibernate |
 | Database | PostgreSQL |
+| Database Migrations | Flyway |
 | Build Tool | Maven |
 | API Design | REST APIs |
 | API Documentation | Springdoc OpenAPI / Swagger UI |
@@ -125,6 +126,17 @@ Offer statuses:
 - OpenAPI metadata configured for the RideShare Backend API.
 - Interactive Swagger UI for exploring and testing endpoints.
 - API documentation generated from the application's REST API definitions.
+
+### 8. Database Migrations
+
+- Flyway integration for version-controlled database schema management.
+- Initial database schema defined in `V1__initial_schema.sql`.
+- Migration files stored under `src/main/resources/db/migration`.
+- Flyway manages schema creation and future schema changes.
+- Hibernate uses `ddl-auto=validate` to validate entity mappings against the database rather than automatically modifying the schema.
+- Existing PostgreSQL database successfully baselined at version `1`.
+- Fresh databases execute the initial migration automatically.
+- PostgreSQL schema history is tracked through `flyway_schema_history`.
 
 ## API Documentation
 
@@ -336,7 +348,7 @@ Cancellation and pending-offer expiration are coordinated within the transaction
 
 ## Database Design and Integrity
 
-The project uses PostgreSQL with Spring Data JPA and Hibernate.
+The project uses PostgreSQL with Spring Data JPA, Hibernate, and Flyway.
 
 ### Core Relationships
 
@@ -378,11 +390,43 @@ The `ride_offers` table mapping defines a named uniqueness constraint on `(ride_
 
 This is a database-level safeguard in addition to the duplicate check performed by the service layer.
 
-### Schema Management
+### Schema Management with Flyway
 
-Entity annotations describe the intended database mapping. The project currently uses Hibernate `ddl-auto=update` for development schema updates.
+Flyway is responsible for versioned database schema changes.
 
-The driver constraints and ride indexes have also been checked against the development PostgreSQL database. Those manual database changes are not currently represented as versioned migration scripts. Flyway migrations are a planned improvement so schema changes can be reproduced consistently across environments.
+The initial migration is located at:
+
+`src/main/resources/db/migration/V1__initial_schema.sql`
+
+The migration creates the initial application schema, including:
+
+- `users`
+- `vehicles`
+- `drivers`
+- `rides`
+- `ride_offers`
+- Foreign key, unique, and CHECK constraints.
+- Indexes on frequently queried ride columns.
+
+Flyway maintains a `flyway_schema_history` table to record applied migrations and database version information.
+
+The application configuration uses:
+
+```properties
+spring.flyway.enabled=true
+spring.flyway.baseline-on-migrate=true
+spring.flyway.baseline-version=1
+
+spring.jpa.hibernate.ddl-auto=validate
+```
+
+**Existing database:** The development PostgreSQL database already contained the application tables. It was successfully baselined at version `1`. Flyway created its history table and recorded the baseline without rerunning the initial migration against existing tables.
+
+**Fresh database:** When the application connects to an empty database, Flyway executes `V1__initial_schema.sql` to create the initial schema.
+
+Hibernate is configured with `ddl-auto=validate`. It validates the entity mappings against the database schema instead of automatically creating or updating database tables.
+
+Future schema changes should be introduced through new, versioned Flyway migration files rather than manual database changes or Hibernate schema updates.
 
 ## Automated Testing
 
@@ -390,39 +434,14 @@ The project uses **JUnit 5, Mockito, Spring MVC Test / MockMvc, Spring Boot Test
 
 The latest full Maven regression run confirms:
 
-<details>
-<summary>Test suite results</summary>
-
 | Metric | Result |
 |---|---:|
 | Test classes | 14 |
-| Total test methods | **157** |
-| Passed | **157** |
+| Total test methods | **156** |
+| Passed | **156** |
 | Failures | 0 |
 | Errors | 0 |
 | Skipped | 0 |
-
-</details>
-
-### Test Classes
-
-| Test Class | Test Methods | Coverage |
-|---|---:|---|
-| `UserServiceTest` | 26 | User business logic, validation, and duplicate checks |
-| `UserControllerTest` | 14 | User API request and response behavior |
-| `VehicleServiceTest` | 13 | Vehicle business logic and constraints |
-| `VehicleControllerTest` | 5 | Vehicle API behavior |
-| `DriverServiceTest` | 15 | Driver registration, retrieval, updates, and assignment rules |
-| `DriverControllerTest` | 10 | Driver API request and response behavior |
-| `RideServiceTest` | 24 | Ride creation, retrieval, cancellation, start, and completion |
-| `RideControllerTest` | 10 | Ride API behavior |
-| `RideOfferServiceTest` | 29 | Offer creation, acceptance, rejection, expiration, and validation rules |
-| `RideOfferControllerTest` | 3 | Ride-offer API behavior |
-| `RideRepositoryIntegrationTest` | 1 | PostgreSQL persistence, rider relationship, and ride timestamp |
-| `RideWorkflowIntegrationTest` | 5 | PostgreSQL-backed offer workflow, ride lifecycle, and concurrency scenarios |
-| `RideWorkflowHttpIntegrationTest` | 1 | HTTP-level ride lifecycle using MockMvc and PostgreSQL Testcontainers |
-| `RidesharingApplicationTests` | 1 | Spring application context startup with PostgreSQL Testcontainers |
-| **Total** | **157** | **14 test classes** |
 
 ### Testing Layers
 
@@ -430,10 +449,11 @@ The latest full Maven regression run confirms:
 - **Controller tests:** `@WebMvcTest` and MockMvc exercise HTTP-layer behavior without starting the full application.
 - **Repository integration test:** `@DataJpaTest` runs against a real PostgreSQL container and verifies persistence, entity relationships, and the ride creation timestamp.
 - **Workflow integration tests:** `@SpringBootTest` runs service workflows against PostgreSQL through Testcontainers.
-- **HTTP-level integration test:** `@SpringBootTest` with `@AutoConfigureMockMvc` exercises actual application HTTP endpoints against a PostgreSQL Testcontainers database. It verifies the complete ride lifecycle, from ride creation and offer creation through offer acceptance, ride start, and ride completion.
+- **HTTP-level integration test:** `@SpringBootTest` with `@AutoConfigureMockMvc` exercises application HTTP endpoints against a PostgreSQL Testcontainers database. It verifies the complete ride lifecycle, from ride creation and offer creation through offer acceptance, ride start, and ride completion.
 - **Concurrency integration tests:** Separate threads attempt competing operations against the same ride. The tests verify that only one driver can accept a ride and that concurrent duplicate offer creation does not produce duplicate offers.
 - **Database constraint test:** Attempts to insert duplicate ride-driver offers directly and verifies that PostgreSQL rejects the duplicate.
 - **Application context test:** Starts the Spring application context using a PostgreSQL Testcontainers database.
+- **Migration validation:** Application startup and PostgreSQL-backed tests verify that Flyway migration setup works with the configured database.
 
 ### Important Tested Scenarios
 
@@ -453,6 +473,8 @@ The latest full Maven regression run confirms:
 - Competing offer acceptance attempts against the same ride using concurrent threads.
 - Concurrent attempts to create duplicate offers for the same ride-driver pair.
 - Database-level duplicate offer rejection through the PostgreSQL unique constraint.
+- Flyway baseline behavior for the existing development database.
+- Flyway migration startup against fresh PostgreSQL databases used by Testcontainers.
 
 The PostgreSQL-backed tests use **Testcontainers** with the `postgres:16-alpine` image. Docker must be running when executing the full test suite.
 
@@ -500,16 +522,16 @@ The project follows a **layered monolithic architecture**.
 Client / Postman / Swagger UI
            |
            v
-      Controller
+       Controller
            |
            v
-        Service
+         Service
            |
            v
-      Repository
+       Repository
            |
            v
-       PostgreSQL
+        PostgreSQL
 ```
 
 ### Layer Responsibilities
@@ -521,6 +543,7 @@ Client / Postman / Swagger UI
 - **DTO:** Controls the data accepted by API requests and exposed through API responses.
 - **Global exception handler:** Converts application exceptions into structured HTTP error responses.
 - **OpenAPI configuration:** Provides API metadata for generated documentation.
+- **Flyway:** Manages versioned database schema changes.
 
 ### Domain Model
 
@@ -539,10 +562,10 @@ User (Rider)
      |
      v
     Ride
-     ├── Driver (optional assignment)
-     └── RideOffer (multiple offers)
-           ├── Driver
-           └── Offer Status
+      ├── Driver (optional assignment)
+      └── RideOffer (multiple offers)
+            ├── Driver
+            └── Offer Status
 ```
 
 - `User` represents a person using the platform.
@@ -555,7 +578,7 @@ The project is currently a **monolithic application, not a microservices archite
 
 ## Project Status
 
-**Status: Core user, driver, vehicle, ride, and ride-offer workflows are implemented. The project has 157 passing automated tests across 14 test classes, including PostgreSQL-backed integration tests, database constraint verification, concurrent ride-offer scenarios, and HTTP-level ride lifecycle integration testing.**
+**Status: Core user, driver, vehicle, ride, and ride-offer workflows are implemented. Flyway database migration support is integrated, and the latest full test run reports 156 passing tests across 14 test classes, including PostgreSQL-backed integration tests, database constraint verification, concurrent ride-offer scenarios, and HTTP-level ride lifecycle integration testing.**
 
 ### Implemented
 
@@ -581,31 +604,32 @@ The project is currently a **monolithic application, not a microservices archite
 - Pessimistic write locking for ride and driver records during ride-offer operations.
 - Pessimistic write locking for ride cancellation, ride start, and ride completion.
 - Pessimistic write locking for assigned driver updates during cancellation and completion.
-- Database constraints and ride indexes in the development database.
+- Database constraints and ride indexes.
+- Flyway integration and initial versioned database migration.
+- Existing PostgreSQL database successfully baselined at version `1`.
+- Hibernate schema validation through `ddl-auto=validate`.
 - Swagger / OpenAPI integration.
 - Manual Postman verification of core workflows.
 - PostgreSQL integration tests using Testcontainers.
 - Database-level duplicate ride-offer constraint verification.
 - Concurrent integration tests for competing ride acceptance and duplicate offer creation.
 - HTTP-level ride lifecycle integration testing using MockMvc and PostgreSQL Testcontainers.
-- JUnit 5, Mockito, MockMvc, and Testcontainers test suites with 157 passing test methods across 14 classes.
+- JUnit 5, Mockito, MockMvc, and Testcontainers test suites with 156 passing test methods across 14 classes.
 - Git-based incremental development and GitHub commits.
 
 ### In Progress
 
-- Reviewing consistency of transaction boundaries and pessimistic locking across ride and ride-offer operations.
-- Reviewing driver availability consistency across ride state transitions.
-- Improving request validation consistency across all controllers.
 - Expanding integration coverage for additional database and transaction edge cases.
+- Improving request validation consistency across all controllers.
+- Reviewing API response and error-response consistency.
+- Preparing the backend for authentication and authorization.
 
 ### Planned Improvements
 
 #### 1. Backend Quality and Testing
 
-- Complete the review of transaction boundaries and driver availability consistency across ride operations.
-- Add Flyway database migrations.
-- Review API response and error-response consistency.
 - Add more integration tests for database and transaction edge cases.
+- Review API response and error-response consistency.
 - Continue adding edge-case tests as business rules evolve.
 
 #### 2. Security and Authentication
@@ -662,7 +686,13 @@ spring.datasource.username=${DB_USERNAME}
 spring.datasource.password=${DB_PASSWORD}
 ```
 
-Do not commit database passwords, API keys, or other secrets. Keep local credentials outside version control.
+Flyway is enabled by default in the application configuration.
+
+For a fresh, empty database, Flyway executes the initial migration automatically.
+
+For an existing non-empty database without Flyway history, the configured baseline settings allow Flyway to baseline it at version `1`. In this case, the initial V1 migration is not executed against the existing tables.
+
+**Important:** Baseline an existing database only after confirming that its schema is compatible with the expected application schema. Do not use baseline settings as a substitute for reviewing an unknown database.
 
 ### 3. Configure Database Credentials
 
@@ -684,11 +714,21 @@ export DB_PASSWORD=your_password
 
 Use the username and password configured for your local PostgreSQL instance.
 
+Do not commit database passwords, API keys, or other secrets. Keep local credentials outside version control.
+
 ### 4. Start the Application
 
 ```bash
 mvn spring-boot:run
 ```
+
+On startup:
+
+1. Spring Boot connects to PostgreSQL.
+2. Flyway checks the database migration history.
+3. Pending migrations are applied when required.
+4. Hibernate validates the schema against the entity mappings.
+5. The application starts if initialization and validation succeed.
 
 ### 5. Explore API Documentation
 
@@ -745,6 +785,7 @@ This project is designed to strengthen practical backend engineering skills, inc
 - Layered architecture and separation of concerns.
 - Spring Data JPA and Hibernate.
 - PostgreSQL relationships, constraints, and indexing.
+- Flyway database migrations and schema versioning.
 - DTOs, validation, and exception handling.
 - Transaction management and JPA dirty checking.
 - State machines and business-rule validation.
