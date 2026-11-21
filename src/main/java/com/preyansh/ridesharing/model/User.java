@@ -32,9 +32,12 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Role role;
 
+    // Stores the BCrypt-hashed password, never the plain-text password.
+    @Column(name = "password_hash")
+    private String passwordHash;
+
     // No-argument constructor required by JPA when loading entities.
     public User() {
-
     }
 
     // Returns the user's primary key.
@@ -85,5 +88,15 @@ public class User {
     // Sets the user's role.
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    // Returns the user's password hash
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    // Sets the user's password hash
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
     }
 }
