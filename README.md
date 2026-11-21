@@ -15,6 +15,7 @@ The goal is to demonstrate practical backend engineering concepts, including RES
 | Database Migrations | Flyway |
 | Build Tool | Maven |
 | API Design | REST APIs |
+| Security | Spring Security, OAuth2 Resource Server, BCrypt password hashing |
 | API Documentation | Springdoc OpenAPI / Swagger UI |
 | Validation | Jakarta Bean Validation |
 | Testing | JUnit 5, Mockito, MockMvc, Spring Boot Test, Testcontainers, AssertJ |
@@ -32,6 +33,7 @@ The goal is to demonstrate practical backend engineering concepts, including RES
 - PostgreSQL persistence using Spring Data JPA.
 - Application-level duplicate checks and database uniqueness constraints for email and phone.
 - User roles: `RIDER` and `DRIVER`.
+- BCrypt password-hash storage foundation added to the `User` entity; plain-text passwords are not stored.
 - Search users independently by name and email.
 - Pagination and sorting through Spring Data `Pageable`.
 - Validation for names, email addresses, and phone numbers.
@@ -137,6 +139,20 @@ Offer statuses:
 - Existing PostgreSQL database successfully baselined at version `1`.
 - Fresh databases execute the initial migration automatically.
 - PostgreSQL schema history is tracked through `flyway_schema_history`.
+
+### 9. Security Foundation
+
+- Spring Security and OAuth2 Resource Server dependencies integrated.
+- `SecurityConfig` defines the initial security filter chain.
+- CSRF is disabled for the current API-development setup.
+- Requests are temporarily permitted without authentication while the authentication flow is being built.
+- `PasswordConfig` exposes a Spring `PasswordEncoder` bean backed by BCrypt.
+- `User` includes a `passwordHash` field mapped to `password_hash`.
+- Flyway migration `V2__add_password_hash_to_users.sql` adds the password-hash column.
+- The password-hash column is currently nullable to preserve existing user records created before authentication was introduced.
+- Four unit tests cover BCrypt hashing, password matching, rejection of incorrect passwords, and salted-hash uniqueness.
+
+**Security limitation:** Authentication and authorization are not complete. Registration, login, JWT generation and validation, endpoint protection, and role-based access control remain to be implemented. The current `permitAll()` configuration is temporary and must be replaced before treating the API as secured.
 
 ## API Documentation
 
@@ -436,9 +452,9 @@ The latest full Maven regression run confirms:
 
 | Metric | Result |
 |---|---:|
-| Test classes | 14 |
-| Total test methods | **156** |
-| Passed | **156** |
+| Test classes | 15 |
+| Total test methods | **160** |
+| Passed | **160** |
 | Failures | 0 |
 | Errors | 0 |
 | Skipped | 0 |
@@ -578,7 +594,7 @@ The project is currently a **monolithic application, not a microservices archite
 
 ## Project Status
 
-**Status: Core user, driver, vehicle, ride, and ride-offer workflows are implemented. Flyway database migration support is integrated, and the latest full test run reports 156 passing tests across 14 test classes, including PostgreSQL-backed integration tests, database constraint verification, concurrent ride-offer scenarios, and HTTP-level ride lifecycle integration testing.**
+**Status: Core user, driver, vehicle, ride, and ride-offer workflows are implemented. Flyway database migration support is integrated. The security foundation now includes Spring Security dependencies, BCrypt password hashing, and a Flyway migration for password-hash storage. The latest full test run reports 160 passing tests across 15 test classes, including PostgreSQL-backed integration tests, concurrency scenarios, HTTP-level ride lifecycle testing, and BCrypt unit tests. Authentication and authorization are still in progress.**
 
 ### Implemented
 
@@ -616,13 +632,19 @@ The project is currently a **monolithic application, not a microservices archite
 - HTTP-level ride lifecycle integration testing using MockMvc and PostgreSQL Testcontainers.
 - JUnit 5, Mockito, MockMvc, and Testcontainers test suites with 156 passing test methods across 14 classes.
 - Git-based incremental development and GitHub commits.
+- Spring Security and OAuth2 Resource Server dependencies.
+- BCrypt password encoder configuration and unit tests.
+- `password_hash` field and Flyway V2 migration.
 
 ### In Progress
 
+- Implementing user registration with BCrypt password hashing.
+- Designing login and JWT-based authentication using Spring Security OAuth2 Resource Server.
+- Replacing the temporary permit-all security configuration with stateless authentication and endpoint authorization.
+- Adding role-based authorization for riders and drivers, including ownership checks for user-specific operations.
 - Expanding integration coverage for additional database and transaction edge cases.
 - Improving request validation consistency across all controllers.
 - Reviewing API response and error-response consistency.
-- Preparing the backend for authentication and authorization.
 
 ### Planned Improvements
 
@@ -634,10 +656,12 @@ The project is currently a **monolithic application, not a microservices archite
 
 #### 2. Security and Authentication
 
-- Spring Security.
-- JWT-based authentication.
-- Role-based authorization for riders and drivers.
-- Authorization checks so users can perform only permitted ride operations.
+- Complete registration and login endpoints.
+- Issue and validate JWT access tokens.
+- Enforce stateless authentication and protect private API endpoints.
+- Add role-based authorization for riders and drivers.
+- Add ownership checks so users can perform only permitted operations on their own rides and accounts.
+- Decide how existing accounts without password hashes will be onboarded or prompted to set passwords.
 - Secure database credentials and environment-specific configuration.
 
 #### 3. Additional Features
@@ -787,6 +811,7 @@ This project is designed to strengthen practical backend engineering skills, inc
 - PostgreSQL relationships, constraints, and indexing.
 - Flyway database migrations and schema versioning.
 - DTOs, validation, and exception handling.
+- Spring Security configuration and BCrypt password hashing.
 - Transaction management and JPA dirty checking.
 - State machines and business-rule validation.
 - Ride assignment and driver availability management.
